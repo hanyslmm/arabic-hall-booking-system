@@ -16,12 +16,7 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const [duration, setDuration] = useState("");
 
-  // Check if user is admin
-  if (!user || profile?.role !== 'ADMIN') {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Fetch settings
+  // Fetch settings - move before conditional returns
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
@@ -31,10 +26,11 @@ export function SettingsPage() {
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: user && profile?.role === 'ADMIN' // Only run when user is authenticated admin
   });
 
-  // Update setting mutation
+  // Update setting mutation - move before conditional returns
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
       const { error } = await supabase
@@ -61,6 +57,7 @@ export function SettingsPage() {
     }
   });
 
+  // useEffect - move before conditional returns
   useEffect(() => {
     if (settings) {
       const durationSetting = settings.find(s => s.key === 'default_booking_duration_minutes');
@@ -69,6 +66,11 @@ export function SettingsPage() {
       }
     }
   }, [settings]);
+
+  // Check if user is admin
+  if (!user || profile?.role !== 'ADMIN') {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

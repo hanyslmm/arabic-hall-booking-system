@@ -34,21 +34,7 @@ export function ReportsPage() {
 
   const hasAdminAccess = isAdmin || isOwner || canManageUsers;
 
-  if (loading) {
-    return (
-      <UnifiedLayout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner />
-        </div>
-      </UnifiedLayout>
-    );
-  }
-
-  if (!user || !hasAdminAccess) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Fetch dashboard statistics
+  // Fetch dashboard statistics - move before conditional returns
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
@@ -69,10 +55,11 @@ export function ReportsPage() {
         totalTeachers,
         totalHalls
       } as DashboardStats;
-    }
+    },
+    enabled: !loading && user && hasAdminAccess // Only run when user is authenticated and has access
   });
 
-  // Fetch all bookings with financial data
+  // Fetch all bookings with financial data - move before conditional returns
   const { data: bookings, isLoading } = useQuery({
     queryKey: ['financial-report'],
     queryFn: async () => {
@@ -83,17 +70,31 @@ export function ReportsPage() {
           start_date,
           class_fees,
           number_of_students,
-          halls(name),
-          teachers(name),
-          subjects(name),
+          halls (name),
+          teachers (name),
           created_at
         `)
-        .order('created_at', { ascending: false });
-      
+        .order('start_date', { ascending: false });
+
       if (error) throw error;
-      return data || [];
-    }
+      return data as BookingFinancialData[];
+    },
+    enabled: !loading && user && hasAdminAccess // Only run when user is authenticated and has access
   });
+
+  if (loading) {
+    return (
+      <UnifiedLayout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner />
+        </div>
+      </UnifiedLayout>
+    );
+  }
+
+  if (!user || !hasAdminAccess) {
+    return <Navigate to="/login" replace />;
+  }
 
   // Calculate total revenue
   const totalRevenue = bookings?.reduce((sum, booking) => sum + (booking.class_fees || 0), 0) || 0;

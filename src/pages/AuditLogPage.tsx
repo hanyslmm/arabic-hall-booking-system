@@ -26,6 +26,50 @@ export function AuditLogPage() {
 
   const hasAdminAccess = isAdmin || isOwner;
 
+  // Fetch audit logs with actor names - move before conditional returns
+  const { data: auditLogs, isLoading } = useQuery({
+    queryKey: ['audit-logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select(`
+          id,
+          actor_user_id,
+          action,
+          details,
+          created_at
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get unique user IDs to fetch actor names
+      const userIds = [...new Set(data.map(log => log.actor_user_id))];
+      
+      if (userIds.length === 0) return data;
+
+      // Fetch user profiles for actor names
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, name')
+        .in('user_id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Map actor names to audit logs
+      const profileMap = profiles.reduce((acc: any, profile) => {
+        acc[profile.user_id] = profile.name;
+        return acc;
+      }, {});
+
+      return data.map(log => ({
+        ...log,
+        actor_name: profileMap[log.actor_user_id] || 'Unknown User'
+      }));
+    },
+    enabled: !loading && user && hasAdminAccess // Only run when user is authenticated and has access
+  });
+
   if (loading) {
     return (
       <UnifiedLayout>
@@ -39,50 +83,6 @@ export function AuditLogPage() {
   if (!user || !hasAdminAccess) {
     return <Navigate to="/login" replace />;
   }
-
-  // Fetch audit logs with actor names
-  const { data: auditLogs, isLoading } = useQuery({
-    queryKey: ['audit-logs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select(`
-          id,
-          actor_user_id,
-          action,
-          details,
-          created_at
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        return [] as AuditLog[];
-      }
-
-      // Fetch profiles separately
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .in('id', data.map(log => log.actor_user_id));
-
-      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      
-      return data.map(log => {
-        const profile = profilesMap.get(log.actor_user_id);
-        return {
-          id: log.id,
-          actor_user_id: log.actor_user_id,
-          action: log.action,
-          details: log.details,
-          created_at: log.created_at,
-          actor_name: profile?.full_name || profile?.email || 'مستخدم محذوف'
-        };
-      }) as AuditLog[];
-    }
-  });
 
   const getActionDisplayName = (action: string) => {
     const actionMap: { [key: string]: string } = {

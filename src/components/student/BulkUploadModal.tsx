@@ -89,7 +89,7 @@ export function BulkUploadModal({ isOpen, onClose, onUpload, defaultClassFees = 
     return city.toString().trim();
   };
 
-  const convertToNumber = (value: any): number => {
+  const convertToNumber = (value: unknown): number => {
     if (value === null || value === undefined || value === '') return 0;
     
     // Convert to string first and remove spaces
@@ -99,7 +99,7 @@ export function BulkUploadModal({ isOpen, onClose, onUpload, defaultClassFees = 
     return isNaN(num) ? 0 : Math.max(0, num);
   };
 
-  const getPaymentValue = (row: any): number => {
+  const getPaymentValue = (row: Record<string, unknown>): number => {
     // Check multiple possible column names for payment
     const possiblePaymentColumns = [
       'Payment', 'payment', 'المدفوع', 'مدفوع', 'الدفع', 'دفع', 
@@ -125,7 +125,7 @@ export function BulkUploadModal({ isOpen, onClose, onUpload, defaultClassFees = 
       const processedData: BulkStudentData[] = [];
       const errorList: string[] = [];
 
-      jsonData.forEach((row: any, index: number) => {
+      jsonData.forEach((row: Record<string, unknown>, index: number) => {
         const rowNumber = index + 2; // +2 because Excel rows start at 1 and we have header
         
         // Skip rows without names (ignore completely)
