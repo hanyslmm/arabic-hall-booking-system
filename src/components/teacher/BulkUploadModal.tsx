@@ -974,11 +974,13 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
             <Button 
               onClick={() => {
                 setShowUploadModeDialog(false);
+                handleUpload();
               }}
               disabled={isProcessing}
               className="bg-primary hover:bg-primary/90"
             >
-              التالي
+              <Upload className="h-4 w-4 mr-2" />
+              رفع البيانات
             </Button>
           ) : (
             parsedData.length > 0 && !isProcessing && errors.length === 0 && (
