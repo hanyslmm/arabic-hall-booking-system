@@ -181,28 +181,28 @@ const TeachersPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir="rtl">
       <Navbar 
         userRole={profile?.user_role} 
         userName={profile?.full_name || profile?.email || undefined}
         isAdmin={isAdmin}
       />
       
-      <main className="container mx-auto p-4 space-y-6">
-        <div className="flex items-center justify-between">
+      <main className="container mx-auto px-4 py-6 space-y-6 max-w-7xl">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-primary">إدارة المعلمين</h1>
             <p className="text-muted-foreground mt-2">
               عرض وإدارة المعلمين في النظام
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <GraduationCap className="h-5 w-5" />
               <span className="font-semibold">{teachers?.length || 0} معلم</span>
             </div>
             {canManage && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <BulkUploadModal>
                   <Button variant="outline">
                     <Upload className="h-4 w-4 mr-2" />
@@ -242,73 +242,75 @@ const TeachersPage = () => {
                 )}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">اسم المعلم</TableHead>
-                    <TableHead className="text-right">تاريخ الإضافة</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">رقم التلفون</TableHead>
-                    <TableHead className="text-right">المادة الدراسية</TableHead>
-                    <TableHead className="text-right">المراحل الدراسية</TableHead>
-                    {canManage && <TableHead className="text-right">الإجراءات</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teachers?.map((teacher) => (
-                    <TableRow key={teacher.id}>
-                      <TableCell className="font-medium">
-                        {teacher.name}
-                      </TableCell>
-                      <TableCell>
-                        {formatShortArabicDate(teacher.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-green-600">
-                          نشط
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {teacher.mobile_phone || "غير محدد"}
-                      </TableCell>
-                      <TableCell>
-                        {teacher.subjects?.name || "غير محدد"}
-                      </TableCell>
-                      <TableCell>
-                        {teacher.teacher_academic_stages && teacher.teacher_academic_stages.length > 0
-                          ? teacher.teacher_academic_stages
-                              .map(stage => stage.academic_stages.name)
-                              .join(", ")
-                          : "غير محدد"}
-                      </TableCell>
-                      {canManage && (
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedTeacher(teacher);
-                                setShowEditTeacher(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => deleteTeacherMutation.mutate(teacher.id)}
-                              disabled={deleteTeacherMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">اسم المعلم</TableHead>
+                      <TableHead className="text-right">تاريخ الإضافة</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">رقم التلفون</TableHead>
+                      <TableHead className="text-right">المادة الدراسية</TableHead>
+                      <TableHead className="text-right">المراحل الدراسية</TableHead>
+                      {canManage && <TableHead className="text-right">الإجراءات</TableHead>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {teachers?.map((teacher) => (
+                      <TableRow key={teacher.id}>
+                        <TableCell className="font-medium">
+                          {teacher.name}
+                        </TableCell>
+                        <TableCell>
+                          {formatShortArabicDate(teacher.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-green-600">
+                            نشط
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {teacher.mobile_phone || "غير محدد"}
+                        </TableCell>
+                        <TableCell>
+                          {teacher.subjects?.name || "غير محدد"}
+                        </TableCell>
+                        <TableCell>
+                          {teacher.teacher_academic_stages && teacher.teacher_academic_stages.length > 0
+                            ? teacher.teacher_academic_stages
+                                .map(stage => stage.academic_stages.name)
+                                .join(", ")
+                            : "غير محدد"}
+                        </TableCell>
+                        {canManage && (
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTeacher(teacher);
+                                  setShowEditTeacher(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteTeacherMutation.mutate(teacher.id)}
+                                disabled={deleteTeacherMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
