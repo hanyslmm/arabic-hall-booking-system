@@ -8,15 +8,13 @@ import { queryKeys } from "@/utils/queryKeys";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Clock, MapPin, Filter, Hash } from "lucide-react";
-import { formatTimeAmPm } from "@/utils/dateUtils";
+import { Calendar, Users, Clock, MapPin, Filter, Hash, Edit, Trash2 } from "lucide-react";
+import { formatTimeAmPm, formatShortArabicDate } from "@/utils/dateUtils";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { EditBookingModal } from "@/components/booking/EditBookingModal";
 import { useMutation } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { 
   AlertDialog, 
@@ -29,6 +27,7 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
+import { PaginatedTable, TableColumn, TableAction } from "@/components/common/PaginatedTable";
 
 interface Booking {
   id: string;
@@ -204,6 +203,171 @@ const BookingsPage = () => {
     return days.map(day => dayMap[day] || day).join(', ');
   };
 
+  // Define table columns
+  const bookingColumns: TableColumn<Booking>[] = [
+    {
+      key: 'class_code',
+      header: 'كود المجموعة',
+      render: (booking) => (
+        <div className="flex items-center gap-2">
+          <Hash className="h-4 w-4 text-primary" />
+          <span className="font-mono text-sm bg-primary/10 px-2 py-1 rounded">
+            {booking.class_code || 'غير محدد'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'hall',
+      header: 'القاعة',
+      render: (booking) => (
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          {booking.halls.name}
+        </div>
+      ),
+    },
+    {
+      key: 'teacher',
+      header: 'المعلم',
+      render: (booking) => (
+        <div className="flex items-center gap-2">
+          <span>{booking.teachers.name}</span>
+          {booking.teachers.teacher_code && (
+            <span className="text-xs bg-secondary px-1 py-0.5 rounded">
+              {booking.teachers.teacher_code}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'time',
+      header: 'التوقيت',
+      render: (booking) => (
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          {formatTimeAmPm(booking.start_time)}
+        </div>
+      ),
+    },
+    {
+      key: 'student_count',
+      header: 'عدد الطلاب',
+      render: (booking) => (
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold text-primary">
+            {booking.actual_student_count || 0}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            / {booking.number_of_students}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'الحالة',
+      render: (booking) => getStatusBadge(booking.status),
+    },
+  ];
+
+  // Render expanded content for each booking
+  const renderExpandedBookingContent = (booking: Booking) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
+      <div className="space-y-2">
+        <h4 className="font-semibold text-sm">تفاصيل المجموعة</h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">المرحلة:</span>
+            <span>{booking.academic_stages.name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">الأيام:</span>
+            <span>{getDaysInArabic(booking.days_of_week)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">سعة القاعة:</span>
+            <span>{booking.halls.capacity} طالب</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <h4 className="font-semibold text-sm">التواريخ</h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">تاريخ البداية:</span>
+            <span>{formatShortArabicDate(booking.start_date)}</span>
+          </div>
+          {booking.end_date && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">تاريخ النهاية:</span>
+              <span>{formatShortArabicDate(booking.end_date)}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">تاريخ الإنشاء:</span>
+            <span>{formatShortArabicDate(booking.created_at)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h4 className="font-semibold text-sm">الإجراءات</h4>
+        <div className="flex flex-col gap-2">
+          <Button
+            size="sm"
+            onClick={() => navigate(`/class-management/${booking.id}`)}
+            className="bg-primary hover:bg-primary/90 justify-start"
+          >
+            إدارة المجموعة
+          </Button>
+          <div data-booking-id={booking.id}>
+            <EditBookingModal 
+              bookingId={booking.id} 
+              booking={booking} 
+            />
+          </div>
+          <div data-delete-booking-id={booking.id}>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deleteMutation.isPending}
+                  className="justify-start"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  حذف المجموعة
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>حذف المجموعة</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    هل أنت متأكد من حذف مجموعة "{booking.class_code}"؟ 
+                    سيتم حذف جميع البيانات المرتبطة بها بما في ذلك تسجيلات الطلاب والمدفوعات.
+                    هذا الإجراء لا يمكن التراجع عنه.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(booking.id)}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    حذف المجموعة
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -280,150 +444,17 @@ const BookingsPage = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>قائمة الحجوزات</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <p>جاري تحميل الحجوزات...</p>
-              </div>
-            ) : bookings?.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">لا توجد حجوزات</h3>
-                <p className="text-muted-foreground mb-4">
-                  لم يتم إنشاء أي حجوزات بعد
-                </p>
-                {canManage && (
-                  <Button onClick={() => navigate('/booking')}>
-                    إنشاء حجز جديد
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">كود المجموعة</TableHead>
-                        <TableHead className="text-right">القاعة</TableHead>
-                        <TableHead className="text-right">المعلم</TableHead>
-                        <TableHead className="text-right">المرحلة</TableHead>
-                        <TableHead className="text-right">التوقيت</TableHead>
-                        <TableHead className="text-right">الأيام</TableHead>
-                        <TableHead className="text-right">عدد الطلاب</TableHead>
-                        <TableHead className="text-right">الحالة</TableHead>
-                        {canManage && <TableHead className="text-right">الإجراءات</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                  <TableBody>
-                    {bookings?.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Hash className="h-4 w-4 text-primary" />
-                            <span className="font-mono text-sm bg-primary/10 px-2 py-1 rounded">
-                              {booking.class_code || 'غير محدد'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            {booking.halls.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span>{booking.teachers.name}</span>
-                            {booking.teachers.teacher_code && (
-                              <span className="text-xs bg-secondary px-1 py-0.5 rounded">
-                                {booking.teachers.teacher_code}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{booking.academic_stages.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            {formatTimeAmPm(booking.start_time)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {getDaysInArabic(booking.days_of_week)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold text-primary">
-                              {booking.actual_student_count || 0}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              / {booking.number_of_students}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(booking.status)}
-                        </TableCell>
-                        {canManage && (
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => navigate(`/class-management/${booking.id}`)}
-                                className="bg-primary hover:bg-primary/90"
-                              >
-                                إدارة المجموعة
-                              </Button>
-                              <EditBookingModal 
-                                bookingId={booking.id} 
-                                booking={booking} 
-                              />
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    disabled={deleteMutation.isPending}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>حذف المجموعة</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      هل أنت متأكد من حذف مجموعة "{booking.class_code}"؟ 
-                                      سيتم حذف جميع البيانات المرتبطة بها بما في ذلك تسجيلات الطلاب والمدفوعات.
-                                      هذا الإجراء لا يمكن التراجع عنه.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => deleteMutation.mutate(booking.id)}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      حذف المجموعة
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <PaginatedTable
+          data={bookings || []}
+          columns={bookingColumns}
+          title="قائمة الحجوزات"
+          isLoading={isLoading}
+          emptyMessage="لم يتم إنشاء أي حجوزات بعد"
+          emptyIcon={<Calendar className="h-16 w-16 mx-auto text-muted-foreground" />}
+          getRowKey={(booking) => booking.id}
+          expandedContent={renderExpandedBookingContent}
+          itemsPerPage={50}
+        />
       </main>
     </div>
   );

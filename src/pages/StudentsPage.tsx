@@ -4,7 +4,6 @@ import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -14,9 +13,10 @@ import { EditStudentModal } from "@/components/student/EditStudentModal";
 import { BulkUploadModal } from "@/components/student/BulkUploadModal";
 import { EnhancedBulkUploadModal } from "@/components/student/EnhancedBulkUploadModal";
 import { studentsApi, Student } from "@/api/students";
-import { Plus, Search, Upload, Edit, Trash2, Users } from "lucide-react";
+import { Plus, Search, Upload, Edit, Trash2, Users, Phone, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { formatShortArabicDate } from "@/utils/dateUtils";
+import { PaginatedTable, TableColumn, TableAction } from "@/components/common/PaginatedTable";
 
 const StudentsPage = () => {
   const { profile } = useAuth();
@@ -97,6 +97,138 @@ const StudentsPage = () => {
 
   const canManageStudents = profile?.role === 'ADMIN' || 
     (profile?.user_role && ['owner', 'manager'].includes(profile.user_role));
+
+  // Define table columns
+  const studentColumns: TableColumn<Student>[] = [
+    {
+      key: 'serial_number',
+      header: 'الرقم التسلسلي',
+      render: (student) => (
+        <Badge variant="secondary">{student.serial_number}</Badge>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'الاسم',
+      render: (student) => (
+        <span className="font-medium">{student.name}</span>
+      ),
+    },
+    {
+      key: 'mobile_phone',
+      header: 'رقم الهاتف',
+      render: (student) => (
+        <div className="flex items-center gap-2">
+          <Phone className="h-4 w-4 text-muted-foreground" />
+          {student.mobile_phone}
+        </div>
+      ),
+    },
+    {
+      key: 'city',
+      header: 'المدينة',
+      render: (student) => (
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          {student.city || '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'تاريخ التسجيل',
+      render: (student) => (
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          {formatShortArabicDate(student.created_at)}
+        </div>
+      ),
+    },
+  ];
+
+  // Render expanded content for each student
+  const renderExpandedStudentContent = (student: Student) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
+      <div className="space-y-2">
+        <h4 className="font-semibold text-sm">معلومات الاتصال</h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">الهاتف المحمول:</span>
+            <span>{student.mobile_phone}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">هاتف ولي الأمر:</span>
+            <span>{student.parent_phone || '-'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">المدينة:</span>
+            <span>{student.city || '-'}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <h4 className="font-semibold text-sm">معلومات التسجيل</h4>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">الرقم التسلسلي:</span>
+            <Badge variant="secondary">{student.serial_number}</Badge>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">تاريخ التسجيل:</span>
+            <span>{formatShortArabicDate(student.created_at)}</span>
+          </div>
+        </div>
+      </div>
+
+      {canManageStudents && (
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm">الإجراءات</h4>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingStudent(student)}
+              className="justify-start"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              تعديل
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="justify-start"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  حذف
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    هل أنت متأكد من حذف الطالب "{student.name}"؟ 
+                    هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع تسجيلاته وحضوره ومدفوعاته.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(student.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    حذف
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -217,96 +349,17 @@ const StudentsPage = () => {
         </Card>
 
         {/* Students Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>قائمة الطلاب ({students.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {students.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">لا توجد طلاب مسجلين</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>الرقم التسلسلي</TableHead>
-                      <TableHead>الاسم</TableHead>
-                      <TableHead>رقم الهاتف</TableHead>
-                      <TableHead>هاتف ولي الأمر</TableHead>
-                      <TableHead>المدينة</TableHead>
-                      <TableHead>تاريخ التسجيل</TableHead>
-                      {canManageStudents && <TableHead>الإجراءات</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <Badge variant="secondary">{student.serial_number}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{student.name}</TableCell>
-                        <TableCell>{student.mobile_phone}</TableCell>
-                        <TableCell>{student.parent_phone || '-'}</TableCell>
-                        <TableCell>{student.city || '-'}</TableCell>
-                        <TableCell>
-                          {formatShortArabicDate(student.created_at)}
-                        </TableCell>
-                        {canManageStudents && (
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setEditingStudent(student)}
-                                className="flex items-center gap-1"
-                              >
-                                <Edit className="h-3 w-3" />
-                                تعديل
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                    حذف
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      هل أنت متأكد من حذف الطالب "{student.name}"؟ 
-                                      هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع تسجيلاته وحضوره ومدفوعاته.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => deleteMutation.mutate(student.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      حذف
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <PaginatedTable
+          data={students}
+          columns={studentColumns}
+          title={`قائمة الطلاب (${students.length})`}
+          isLoading={false}
+          emptyMessage="لا توجد طلاب مسجلين"
+          emptyIcon={<Users className="h-12 w-12 text-muted-foreground mx-auto" />}
+          getRowKey={(student) => student.id}
+          expandedContent={renderExpandedStudentContent}
+          itemsPerPage={50}
+        />
 
         {/* Modals */}
         <AddStudentModal 
