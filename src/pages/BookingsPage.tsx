@@ -218,12 +218,26 @@ const BookingsPage = () => {
       ),
     },
     {
+      key: 'academic_stage',
+      header: 'المرحلة الدراسية',
+      render: (booking) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+            {booking.academic_stages.name}
+          </span>
+        </div>
+      ),
+    },
+    {
       key: 'hall',
       header: 'القاعة',
       render: (booking) => (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
-          {booking.halls.name}
+          <div className="flex flex-col">
+            <span className="font-medium">{booking.halls.name}</span>
+            <span className="text-xs text-muted-foreground">سعة: {booking.halls.capacity}</span>
+          </div>
         </div>
       ),
     },
@@ -232,22 +246,29 @@ const BookingsPage = () => {
       header: 'المعلم',
       render: (booking) => (
         <div className="flex items-center gap-2">
-          <span>{booking.teachers.name}</span>
-          {booking.teachers.teacher_code && (
-            <span className="text-xs bg-secondary px-1 py-0.5 rounded">
-              {booking.teachers.teacher_code}
-            </span>
-          )}
+          <div className="flex flex-col">
+            <span className="font-medium">{booking.teachers.name}</span>
+            {booking.teachers.teacher_code && (
+              <span className="text-xs bg-secondary px-1 py-0.5 rounded w-fit">
+                {booking.teachers.teacher_code}
+              </span>
+            )}
+          </div>
         </div>
       ),
     },
     {
-      key: 'time',
-      header: 'التوقيت',
+      key: 'time_days',
+      header: 'التوقيت والأيام',
       render: (booking) => (
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          {formatTimeAmPm(booking.start_time)}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{formatTimeAmPm(booking.start_time)}</span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {getDaysInArabic(booking.days_of_week)}
+          </div>
         </div>
       ),
     },
@@ -257,12 +278,32 @@ const BookingsPage = () => {
       render: (booking) => (
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="font-semibold text-primary">
-            {booking.actual_student_count || 0}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            / {booking.number_of_students}
-          </span>
+          <div className="flex flex-col items-center">
+            <span className="font-semibold text-primary text-lg">
+              {booking.actual_student_count || 0}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              من {booking.number_of_students}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'dates',
+      header: 'التواريخ',
+      render: (booking) => (
+        <div className="flex flex-col gap-1 text-sm">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-green-600" />
+            <span className="text-xs">البداية: {formatShortArabicDate(booking.start_date)}</span>
+          </div>
+          {booking.end_date && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-red-600" />
+              <span className="text-xs">النهاية: {formatShortArabicDate(booking.end_date)}</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -380,19 +421,19 @@ const BookingsPage = () => {
       <main className="container mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-primary">الحجوزات النشطة</h1>
+            <h1 className="text-3xl font-bold text-primary">إدارة المجموعات</h1>
             <p className="text-muted-foreground mt-2">
-              عرض وإدارة حجوزات القاعات
+              عرض وإدارة المجموعات الدراسية والطلاب المسجلين بها
             </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              <span className="font-semibold">{bookings?.length || 0} حجز</span>
+              <Users className="h-5 w-5" />
+              <span className="font-semibold">{bookings?.length || 0} مجموعة</span>
             </div>
             {canManage && (
               <Button onClick={() => navigate('/booking')}>
-                حجز جديد
+                إضافة مجموعة جديدة
               </Button>
             )}
           </div>
@@ -447,10 +488,10 @@ const BookingsPage = () => {
         <PaginatedTable
           data={bookings || []}
           columns={bookingColumns}
-          title="قائمة الحجوزات"
+          title="قائمة المجموعات الدراسية"
           isLoading={isLoading}
-          emptyMessage="لم يتم إنشاء أي حجوزات بعد"
-          emptyIcon={<Calendar className="h-16 w-16 mx-auto text-muted-foreground" />}
+          emptyMessage="لم يتم إنشاء أي مجموعات بعد"
+          emptyIcon={<Users className="h-16 w-16 mx-auto text-muted-foreground" />}
           getRowKey={(booking) => booking.id}
           expandedContent={renderExpandedBookingContent}
           itemsPerPage={50}

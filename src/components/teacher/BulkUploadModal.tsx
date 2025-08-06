@@ -451,6 +451,7 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
   };
 
   const getDarsPaymentValue = (row: any): number => {
+    // Fixed: Only accept 140 as valid payment amount from Dars column, reject all other values
     // For array format (using column indices)
     if (Array.isArray(row)) {
       // Check multiple possible columns for "dars" payment
@@ -460,7 +461,8 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
         if (cellValue !== undefined && cellValue !== null && cellValue !== '') {
           const num = Number(cellValue.toString().replace(/\D/g, ''));
           if (!isNaN(num) && num > 0) {
-            return num;
+            // Only allow 140 or return 0 for any other value
+            return num === 140 ? 140 : 0;
           }
         }
       }
@@ -473,7 +475,10 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
         const value = row[key];
         if (value !== undefined && value !== null && value !== '') {
           const num = Number(value.toString().replace(/\D/g, ''));
-          return isNaN(num) ? 0 : Math.max(0, num);
+          if (!isNaN(num) && num > 0) {
+            // Only allow 140 or return 0 for any other value
+            return num === 140 ? 140 : 0;
+          }
         }
       }
     }
