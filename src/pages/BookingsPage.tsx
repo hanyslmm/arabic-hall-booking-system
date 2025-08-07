@@ -27,7 +27,7 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
-import { PaginatedTable, TableColumn, TableAction } from "@/components/common/PaginatedTable";
+import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 
 interface Booking {
   id: string;
@@ -203,14 +203,15 @@ const BookingsPage = () => {
     return days.map(day => dayMap[day] || day).join(', ');
   };
 
-  // Define table columns
+  // Define table columns with mobile optimization
   const bookingColumns: TableColumn<Booking>[] = [
     {
       key: 'class_code',
       header: 'كود المجموعة',
+      mobileLabel: 'الكود',
       render: (booking) => (
         <div className="flex items-center gap-2">
-          <Hash className="h-4 w-4 text-primary" />
+          <Hash className="h-4 w-4 text-primary sm:inline hidden" />
           <span className="font-mono text-sm bg-primary/10 px-2 py-1 rounded">
             {booking.class_code || 'غير محدد'}
           </span>
@@ -220,20 +221,20 @@ const BookingsPage = () => {
     {
       key: 'academic_stage',
       header: 'المرحلة الدراسية',
+      mobileLabel: 'المرحلة',
       render: (booking) => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-            {booking.academic_stages.name}
-          </span>
-        </div>
+        <span className="font-medium text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+          {booking.academic_stages.name}
+        </span>
       ),
     },
     {
       key: 'hall',
       header: 'القاعة',
+      mobileLabel: 'القاعة',
       render: (booking) => (
         <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <MapPin className="h-4 w-4 text-muted-foreground sm:inline hidden" />
           <div className="flex flex-col">
             <span className="font-medium">{booking.halls.name}</span>
             <span className="text-xs text-muted-foreground">سعة: {booking.halls.capacity}</span>
@@ -244,22 +245,23 @@ const BookingsPage = () => {
     {
       key: 'teacher',
       header: 'المعلم',
+      mobileLabel: 'المعلم',
       render: (booking) => (
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col">
-            <span className="font-medium">{booking.teachers.name}</span>
-            {booking.teachers.teacher_code && (
-              <span className="text-xs bg-secondary px-1 py-0.5 rounded w-fit">
-                {booking.teachers.teacher_code}
-              </span>
-            )}
-          </div>
+        <div className="flex flex-col">
+          <span className="font-medium">{booking.teachers.name}</span>
+          {booking.teachers.teacher_code && (
+            <span className="text-xs bg-secondary px-1 py-0.5 rounded w-fit">
+              {booking.teachers.teacher_code}
+            </span>
+          )}
         </div>
       ),
     },
     {
       key: 'time_days',
       header: 'التوقيت والأيام',
+      mobileLabel: 'التوقيت',
+      hideOnMobile: true, // Hide on mobile, will show in expanded content
       render: (booking) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -275,10 +277,11 @@ const BookingsPage = () => {
     {
       key: 'student_count',
       header: 'عدد الطلاب',
+      mobileLabel: 'الطلاب',
       render: (booking) => (
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <div className="flex flex-col items-center">
+          <Users className="h-4 w-4 text-muted-foreground sm:inline hidden" />
+          <div className="flex flex-col items-start sm:items-center">
             <span className="font-semibold text-primary text-lg">
               {booking.actual_student_count || 0}
             </span>
@@ -292,14 +295,15 @@ const BookingsPage = () => {
     {
       key: 'dates',
       header: 'التواريخ',
+      mobileLabel: 'البداية',
       render: (booking) => (
         <div className="flex flex-col gap-1 text-sm">
           <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-green-600" />
-            <span className="text-xs">البداية: {formatShortArabicDate(booking.start_date)}</span>
+            <Calendar className="h-3 w-3 text-green-600 sm:inline hidden" />
+            <span className="text-xs">{formatShortArabicDate(booking.start_date)}</span>
           </div>
           {booking.end_date && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 sm:block hidden">
               <Calendar className="h-3 w-3 text-red-600" />
               <span className="text-xs">النهاية: {formatShortArabicDate(booking.end_date)}</span>
             </div>
@@ -310,23 +314,24 @@ const BookingsPage = () => {
     {
       key: 'status',
       header: 'الحالة',
+      mobileLabel: 'الحالة',
       render: (booking) => getStatusBadge(booking.status),
     },
   ];
 
   // Render expanded content for each booking
   const renderExpandedBookingContent = (booking: Booking) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
       <div className="space-y-2">
         <h4 className="font-semibold text-sm">تفاصيل المجموعة</h4>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">المرحلة:</span>
-            <span>{booking.academic_stages.name}</span>
+            <span className="text-muted-foreground">التوقيت:</span>
+            <span>{formatTimeAmPm(booking.start_time)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">الأيام:</span>
-            <span>{getDaysInArabic(booking.days_of_week)}</span>
+            <span className="text-xs">{getDaysInArabic(booking.days_of_week)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">سعة القاعة:</span>
@@ -365,46 +370,50 @@ const BookingsPage = () => {
           >
             إدارة المجموعة
           </Button>
-          <div data-booking-id={booking.id}>
-            <EditBookingModal 
-              bookingId={booking.id} 
-              booking={booking} 
-            />
-          </div>
-          <div data-delete-booking-id={booking.id}>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  disabled={deleteMutation.isPending}
-                  className="justify-start"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  حذف المجموعة
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>حذف المجموعة</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    هل أنت متأكد من حذف مجموعة "{booking.class_code}"؟ 
-                    سيتم حذف جميع البيانات المرتبطة بها بما في ذلك تسجيلات الطلاب والمدفوعات.
-                    هذا الإجراء لا يمكن التراجع عنه.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteMutation.mutate(booking.id)}
-                    className="bg-destructive hover:bg-destructive/90"
-                  >
-                    حذف المجموعة
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          {canManage && (
+            <>
+              <div data-booking-id={booking.id}>
+                <EditBookingModal 
+                  bookingId={booking.id} 
+                  booking={booking} 
+                />
+              </div>
+              <div data-delete-booking-id={booking.id}>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={deleteMutation.isPending}
+                      className="justify-start"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      حذف المجموعة
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>حذف المجموعة</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        هل أنت متأكد من حذف مجموعة "{booking.class_code}"؟ 
+                        سيتم حذف جميع البيانات المرتبطة بها بما في ذلك تسجيلات الطلاب والمدفوعات.
+                        هذا الإجراء لا يمكن التراجع عنه.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate(booking.id)}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        حذف المجموعة
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -418,21 +427,21 @@ const BookingsPage = () => {
         isAdmin={isAdmin}
       />
       
-      <main className="container mx-auto p-4 space-y-6">
-        <div className="flex items-center justify-between">
+      <main className="container mx-auto p-4 pt-20 space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-primary">إدارة المجموعات</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary">إدارة المجموعات</h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               عرض وإدارة المجموعات الدراسية والطلاب المسجلين بها
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               <span className="font-semibold">{bookings?.length || 0} مجموعة</span>
             </div>
             {canManage && (
-              <Button onClick={() => navigate('/booking')}>
+              <Button onClick={() => navigate('/booking')} className="w-full sm:w-auto">
                 إضافة مجموعة جديدة
               </Button>
             )}
@@ -441,18 +450,18 @@ const BookingsPage = () => {
 
         {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
               فلترة النتائج
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">القاعة</label>
                 <Select value={selectedHall} onValueChange={setSelectedHall}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="جميع القاعات" />
                   </SelectTrigger>
                   <SelectContent>
@@ -468,7 +477,7 @@ const BookingsPage = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">المعلم</label>
                 <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="جميع المعلمين" />
                   </SelectTrigger>
                   <SelectContent>
@@ -485,7 +494,7 @@ const BookingsPage = () => {
           </CardContent>
         </Card>
 
-        <PaginatedTable
+        <MobileResponsiveTable
           data={bookings || []}
           columns={bookingColumns}
           title="قائمة المجموعات الدراسية"
@@ -494,7 +503,7 @@ const BookingsPage = () => {
           emptyIcon={<Users className="h-16 w-16 mx-auto text-muted-foreground" />}
           getRowKey={(booking) => booking.id}
           expandedContent={renderExpandedBookingContent}
-          itemsPerPage={50}
+          itemsPerPage={10}
         />
       </main>
     </div>

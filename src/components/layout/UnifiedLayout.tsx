@@ -24,7 +24,7 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
         userName={profile?.full_name || profile?.email || undefined}
         isAdmin={isAdmin}
       />
-      <main className="container mx-auto p-4">
+      <main className="container mx-auto p-4 pt-20">
         {children}
       </main>
     </>

@@ -533,4 +533,78 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    /* Improve touch targets */
+    button, [role="button"], input, select, textarea {
+      min-height: 44px;
+    }
+
+    /* Better spacing on mobile */
+    .container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    /* Prevent horizontal overflow */
+    body {
+      overflow-x: hidden;
+    }
+
+    /* Better table scrolling */
+    .overflow-x-auto {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted)) transparent;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar-thumb {
+      background: hsl(var(--muted));
+      border-radius: 3px;
+    }
+
+    /* Improved card spacing on mobile */
+    .space-y-4 > * + * {
+      margin-top: 1rem;
+    }
+
+    /* Better text sizing on mobile */
+    .text-3xl {
+      font-size: 1.875rem;
+      line-height: 2.25rem;
+    }
+
+    /* Improved button sizing */
+    .btn-sm {
+      min-height: 36px;
+      padding: 0.5rem 1rem;
+    }
+
+    /* Better modal positioning */
+    [data-radix-popper-content-wrapper] {
+      z-index: 60 !important;
+    }
+  }
+
+  /* Enhanced mobile interactions */
+  @media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    .hover\:bg-muted:hover {
+      background-color: initial;
+    }
+
+    /* Add active states for touch */
+    button:active, [role="button"]:active {
+      transform: scale(0.98);
+      transition: transform 0.1s ease-in-out;
+    }
+  }
 }

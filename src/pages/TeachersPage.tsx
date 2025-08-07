@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { getTeachers, deleteTeacher } from "@/api/teachers";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { PaginatedTable, TableColumn, TableAction } from "@/components/common/PaginatedTable";
+import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Teacher {
@@ -67,11 +67,12 @@ const TeachersPage = () => {
 
   const canManage = profile?.user_role === 'owner' || profile?.user_role === 'manager' || profile?.user_role === 'space_manager' || isAdmin;
 
-  // Define table columns
+  // Define table columns with mobile optimization
   const teacherColumns: TableColumn<Teacher>[] = [
     {
       key: 'name',
       header: 'اسم المعلم',
+      mobileLabel: 'الاسم',
       render: (teacher) => (
         <span className="font-medium">{teacher.name}</span>
       ),
@@ -79,9 +80,10 @@ const TeachersPage = () => {
     {
       key: 'mobile_phone',
       header: 'رقم التلفون',
+      mobileLabel: 'التلفون',
       render: (teacher) => (
         <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-muted-foreground" />
+          <Phone className="h-4 w-4 text-muted-foreground sm:inline hidden" />
           {teacher.mobile_phone || "غير محدد"}
         </div>
       ),
@@ -89,9 +91,10 @@ const TeachersPage = () => {
     {
       key: 'subject',
       header: 'المادة الدراسية',
+      mobileLabel: 'المادة',
       render: (teacher) => (
         <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-muted-foreground" />
+          <BookOpen className="h-4 w-4 text-muted-foreground sm:inline hidden" />
           {teacher.subjects?.name || "غير محدد"}
         </div>
       ),
@@ -99,6 +102,8 @@ const TeachersPage = () => {
     {
       key: 'created_at',
       header: 'تاريخ الإضافة',
+      mobileLabel: 'التاريخ',
+      hideOnMobile: true,
       render: (teacher) => (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -109,6 +114,7 @@ const TeachersPage = () => {
     {
       key: 'status',
       header: 'الحالة',
+      mobileLabel: 'الحالة',
       render: () => (
         <Badge variant="outline" className="text-green-600">
           نشط
@@ -362,7 +368,7 @@ const TeachersPage = () => {
           </div>
         </div>
 
-        <PaginatedTable
+                  <MobileResponsiveTable
           data={teachers || []}
           columns={teacherColumns}
           title="قائمة المعلمين"

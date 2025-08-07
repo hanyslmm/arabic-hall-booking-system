@@ -16,7 +16,7 @@ import { studentsApi, Student } from "@/api/students";
 import { Plus, Search, Upload, Edit, Trash2, Users, Phone, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { formatShortArabicDate } from "@/utils/dateUtils";
-import { PaginatedTable, TableColumn, TableAction } from "@/components/common/PaginatedTable";
+import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 
 const StudentsPage = () => {
   const { profile } = useAuth();
@@ -98,11 +98,12 @@ const StudentsPage = () => {
   const canManageStudents = profile?.role === 'ADMIN' || 
     (profile?.user_role && ['owner', 'manager'].includes(profile.user_role));
 
-  // Define table columns
+  // Define table columns with mobile optimization
   const studentColumns: TableColumn<Student>[] = [
     {
       key: 'serial_number',
       header: 'الرقم التسلسلي',
+      mobileLabel: 'الرقم',
       render: (student) => (
         <Badge variant="secondary">{student.serial_number}</Badge>
       ),
@@ -110,6 +111,7 @@ const StudentsPage = () => {
     {
       key: 'name',
       header: 'الاسم',
+      mobileLabel: 'الاسم',
       render: (student) => (
         <span className="font-medium">{student.name}</span>
       ),
@@ -117,9 +119,10 @@ const StudentsPage = () => {
     {
       key: 'mobile_phone',
       header: 'رقم الهاتف',
+      mobileLabel: 'الهاتف',
       render: (student) => (
         <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-muted-foreground" />
+          <Phone className="h-4 w-4 text-muted-foreground sm:inline hidden" />
           {student.mobile_phone}
         </div>
       ),
@@ -127,6 +130,8 @@ const StudentsPage = () => {
     {
       key: 'city',
       header: 'المدينة',
+      mobileLabel: 'المدينة',
+      hideOnMobile: true,
       render: (student) => (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -137,6 +142,8 @@ const StudentsPage = () => {
     {
       key: 'created_at',
       header: 'تاريخ التسجيل',
+      mobileLabel: 'التاريخ',
+      hideOnMobile: true,
       render: (student) => (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -237,7 +244,7 @@ const StudentsPage = () => {
           userRole={profile?.user_role} 
           userName={profile?.full_name || profile?.email || undefined}
         />
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 pt-20">
           <LoadingSpinner />
         </div>
       </div>
@@ -251,7 +258,7 @@ const StudentsPage = () => {
           userRole={profile?.user_role} 
           userName={profile?.full_name || profile?.email || undefined}
         />
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 pt-20">
           <Card>
             <CardContent className="p-6">
               <p className="text-destructive">خطأ في تحميل بيانات الطلاب</p>
@@ -349,7 +356,7 @@ const StudentsPage = () => {
         </Card>
 
         {/* Students Table */}
-        <PaginatedTable
+                  <MobileResponsiveTable
           data={students}
           columns={studentColumns}
           title={`قائمة الطلاب (${students.length})`}

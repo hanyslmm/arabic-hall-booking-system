@@ -93,7 +93,7 @@ const StudentRegistrationsPage = () => {
           userRole={profile?.user_role} 
           userName={profile?.full_name || profile?.email || undefined}
         />
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 pt-20">
           <LoadingSpinner />
         </div>
       </div>
@@ -107,7 +107,7 @@ const StudentRegistrationsPage = () => {
           userRole={profile?.user_role} 
           userName={profile?.full_name || profile?.email || undefined}
         />
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 pt-20">
           <Card>
             <CardContent className="p-6">
               <p className="text-destructive">خطأ في تحميل بيانات التسجيلات</p>
