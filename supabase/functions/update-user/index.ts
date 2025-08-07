@@ -41,14 +41,14 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin
+    // Check if user is admin (owner or manager)
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('role, user_role')
+      .select('user_role')
       .eq('id', user.id)
       .single();
 
-    if (profileError || (profile?.role !== 'ADMIN' && profile?.user_role !== 'owner' && profile?.user_role !== 'manager')) {
+    if (profileError || (profile?.user_role !== 'owner' && profile?.user_role !== 'manager')) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -65,12 +65,12 @@ serve(async (req) => {
       );
     }
 
-    // Validate role if provided
+    // Validate user_role if provided
     if (user_role) {
-      const validRoles = ['owner', 'manager', 'space_manager'];
+      const validRoles = ['owner', 'manager', 'space_manager', 'read_only'];
       if (!validRoles.includes(user_role)) {
         return new Response(
-          JSON.stringify({ error: 'Invalid role. Must be one of: owner, manager, space_manager' }),
+          JSON.stringify({ error: 'Invalid user_role. Must be one of: owner, manager, space_manager, read_only' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

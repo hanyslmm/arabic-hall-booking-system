@@ -356,11 +356,11 @@ export const AdminSetup = () => {
                   <span className="font-medium">{user.email}</span>
                   <div className="text-sm">
                     <span className={`px-2 py-1 rounded text-xs ${
-                      user.user_role === 'owner' || user.role === 'ADMIN' 
+                      user.user_role === 'owner' || user.user_role === 'manager'
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {user.user_role} / {user.role}
+                      {user.user_role}
                     </span>
                   </div>
                 </div>

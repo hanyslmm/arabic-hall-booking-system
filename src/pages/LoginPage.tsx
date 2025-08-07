@@ -16,39 +16,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Try admin authentication first for admin and sc_manager
-      if (username === 'admin' || username === 'sc_manager') {
-        try {
-          const adminEmail = username === 'admin' ? 'admin@system.local' : 'sc_manager@system.local';
-          const { data: adminData, error: adminError } = await supabase.rpc('authenticate_admin', {
-            p_username: username,
-            p_password: password
-          });
-          
-          if (adminError) throw adminError;
-          
-          if (adminData && adminData.length > 0) {
-            // Create a session for admin user
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email: adminEmail,
-              password: 'Voda@123'
-            });
-            
-            if (!signInError) {
-              toast({
-                title: "تم تسجيل الدخول",
-                description: username === 'admin' ? "مرحبًا بك أيها المدير!" : "مرحبًا بك مدير نادي العلوم!"
-              });
-              window.location.href = "/";
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (error) {
-          console.error('Admin auth error:', error);
-        }
-      }
-
       // Check if input is an email or username
       let loginEmail = username;
       
@@ -69,7 +36,7 @@ export default function LoginPage() {
         }
       }
 
-      // Regular user authentication
+      // Standard user authentication
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password

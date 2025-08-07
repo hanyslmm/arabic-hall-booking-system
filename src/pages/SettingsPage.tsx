@@ -17,7 +17,7 @@ export function SettingsPage() {
   const [duration, setDuration] = useState("");
 
   // Check if user is admin
-  if (!user || profile?.role !== 'ADMIN') {
+  if (!user || (profile?.user_role !== 'owner' && profile?.user_role !== 'manager')) {
     return <Navigate to="/login" replace />;
   }
 

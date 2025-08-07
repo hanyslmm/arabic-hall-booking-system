@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { UserProfile, AuthPermissions } from "@/types";
-import { USER_ROLES, APP_ROLES } from "@/lib/constants";
+import { USER_ROLES } from "@/lib/constants";
 
 export const usePermissions = (profile: UserProfile | null): AuthPermissions => {
   return useMemo(() => {
@@ -16,16 +16,16 @@ export const usePermissions = (profile: UserProfile | null): AuthPermissions => 
     }
 
     const isOwner = profile.user_role === USER_ROLES.OWNER;
-    const isAdmin = profile.role === APP_ROLES.ADMIN || isOwner;
-    const isManager = profile.user_role === USER_ROLES.MANAGER || isOwner || isAdmin;
+    const isManager = profile.user_role === USER_ROLES.MANAGER;
+    const isAdmin = isOwner || isManager; // Admin is now derived from user_role (owner or manager)
 
     return {
       isOwner,
       isAdmin,
-      isManager,
-      canManageBookings: isManager,
-      canManageData: isManager,
-      canManageUsers: isOwner || isAdmin
+      isManager: isManager || isOwner, // Manager includes owner
+      canManageBookings: isAdmin,
+      canManageData: isAdmin,
+      canManageUsers: isAdmin
     };
   }, [profile]);
 };

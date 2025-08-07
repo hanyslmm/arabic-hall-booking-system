@@ -14,7 +14,6 @@ export const debugCurrentUser = async () => {
     console.log("Current session user:", {
       id: session?.user?.id,
       email: session?.user?.email,
-      role: session?.user?.role,
       aud: session?.user?.aud
     });
     

@@ -208,6 +208,12 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
             مدير قاعات
           </Badge>
         );
+      case "read_only":
+        return (
+          <Badge variant="outline" className="text-xs">
+            قراءة فقط
+          </Badge>
+        );
       default:
         return (
           <Badge variant="outline" className="text-xs">

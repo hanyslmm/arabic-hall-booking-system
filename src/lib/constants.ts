@@ -15,10 +15,7 @@ export const USER_ROLES = {
   READ_ONLY: 'read_only'
 } as const;
 
-export const APP_ROLES = {
-  USER: 'USER',
-  ADMIN: 'ADMIN'
-} as const;
+
 
 export const BOOKING_STATUS = {
   ACTIVE: 'active',

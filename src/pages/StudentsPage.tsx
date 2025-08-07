@@ -96,8 +96,7 @@ const StudentsPage = () => {
     queryClient.invalidateQueries({ queryKey: ["students"] });
   };
 
-  const canManageStudents = profile?.role === 'ADMIN' || 
-    (profile?.user_role && ['owner', 'manager'].includes(profile.user_role));
+  const canManageStudents = profile?.user_role && ['owner', 'manager'].includes(profile.user_role);
 
   // Define table columns with mobile optimization
   const studentColumns: TableColumn<Student>[] = [

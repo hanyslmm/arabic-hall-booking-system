@@ -46,13 +46,15 @@ export const Navbar = ({
         return <Badge variant="secondary" className="text-xs">مدير</Badge>;
       case 'space_manager':
         return <Badge variant="outline" className="text-xs">مدير قاعات</Badge>;
+      case 'read_only':
+        return <Badge variant="outline" className="text-xs">قراءة فقط</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">مستخدم</Badge>;
     }
   };
 
-  const canManageBookings = userRole === 'owner' || userRole === 'manager' || isAdmin;
-  const isOwnerOrAdmin = userRole === 'owner' || userRole === 'manager' || isAdmin;
+  const canManageBookings = userRole === 'owner' || userRole === 'manager';
+  const isOwnerOrAdmin = userRole === 'owner' || userRole === 'manager';
 
   const navigation = [
     {

@@ -150,8 +150,8 @@ export const UserPrivilegeManager = () => {
     }
   };
 
-  const getRoleBadgeVariant = (userRole: string, role: string) => {
-    if (userRole === 'owner' || role === 'ADMIN') return 'destructive';
+  const getRoleBadgeVariant = (userRole: string) => {
+    if (userRole === 'owner') return 'destructive';
     if (userRole === 'manager') return 'default';
     if (userRole === 'read_only') return 'secondary';
     return 'outline';
@@ -281,10 +281,10 @@ export const UserPrivilegeManager = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={getRoleBadgeVariant(user.user_role, user.role)}>
-                      {getRoleDisplayName(user.user_role, user.role)}
+                    <Badge variant={getRoleBadgeVariant(user.user_role)}>
+                      {getRoleDisplayName(user.user_role)}
                     </Badge>
-                    {canPerformAdminActions(user.user_role, user.role) && (
+                    {canPerformAdminActions(user.user_role) && (
                       <UserCheck className="h-4 w-4 text-green-600" />
                     )}
                   </div>

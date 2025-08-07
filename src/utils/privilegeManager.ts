@@ -1,14 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = 'owner' | 'manager' | 'space_manager' | 'read_only';
-export type RoleType = 'ADMIN' | 'USER';
 
 export interface UserProfile {
   id: string;
   email: string;
   full_name?: string;
   user_role: UserRole;
-  role: RoleType;
   created_at: string;
   updated_at: string;
 }
@@ -29,15 +27,13 @@ export const isCurrentUserAdmin = async (): Promise<boolean> => {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('user_role, role')
+      .select('user_role')
       .eq('id', user.id)
       .single();
 
     if (error) return false;
 
-    return data.user_role === 'owner' || 
-           data.user_role === 'manager' || 
-           data.role === 'ADMIN';
+    return data.user_role === 'owner' || data.user_role === 'manager';
   } catch (error) {
     console.error('Error checking admin privileges:', error);
     return false;
@@ -113,7 +109,6 @@ export const grantAdminPrivileges = async (email: string): Promise<PrivilegeResu
       .from('profiles')
       .update({
         user_role: 'owner',
-        role: 'ADMIN',
         updated_at: new Date().toISOString()
       })
       .eq('id', userData.id);
@@ -164,7 +159,6 @@ export const grantReadOnlyPrivileges = async (email: string): Promise<PrivilegeR
       .from('profiles')
       .update({
         user_role: 'read_only' as any, // Cast to bypass TypeScript type restriction
-        role: 'USER',
         updated_at: new Date().toISOString()
       })
       .eq('id', userData.id);
@@ -226,7 +220,6 @@ export const createAdminUser = async (email: string, fullName?: string): Promise
         email: email,
         full_name: fullName || email.split('@')[0],
         user_role: 'owner' as any, // Cast to bypass TypeScript type restriction
-        role: 'ADMIN' as any, // Cast to bypass TypeScript type restriction
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'id'
@@ -293,8 +286,7 @@ export const createNewAdminUser = async (email: string, password: string, fullNa
         id: authData.user.id,
         email: email,
         full_name: fullName,
-        user_role: 'owner',
-        role: 'ADMIN'
+        user_role: 'owner'
       });
 
     if (profileError) {
@@ -348,8 +340,8 @@ export const upgradeAllExistingUsers = async (): Promise<Array<{email: string} &
 /**
  * Get role display name in Arabic
  */
-export const getRoleDisplayName = (userRole: UserRole, role: RoleType): string => {
-  if (userRole === 'owner' || role === 'ADMIN') {
+export const getRoleDisplayName = (userRole: UserRole): string => {
+  if (userRole === 'owner') {
     return 'مدير النظام';
   }
   if (userRole === 'manager') {
@@ -367,8 +359,8 @@ export const getRoleDisplayName = (userRole: UserRole, role: RoleType): string =
 /**
  * Check if user can perform admin actions
  */
-export const canPerformAdminActions = (userRole: UserRole, role: RoleType): boolean => {
-  return userRole === 'owner' || userRole === 'manager' || role === 'ADMIN';
+export const canPerformAdminActions = (userRole: UserRole): boolean => {
+  return userRole === 'owner' || userRole === 'manager';
 };
 
 /**

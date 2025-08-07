@@ -41,14 +41,14 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin
+    // Check if user is admin (owner or manager)
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('role, user_role')
+      .select('user_role')
       .eq('id', user.id)
       .single();
 
-    if (profileError || (profile?.role !== 'ADMIN' && profile?.user_role !== 'owner' && profile?.user_role !== 'manager')) {
+    if (profileError || (profile?.user_role !== 'owner' && profile?.user_role !== 'manager')) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -56,20 +56,20 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { username, password, role, full_name, email, phone } = await req.json();
+    const { username, password, user_role, full_name, email, phone } = await req.json();
 
-    if (!username || !password || !role) {
+    if (!username || !password || !user_role) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: username, password, role' }),
+        JSON.stringify({ error: 'Missing required fields: username, password, user_role' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate role
-    const validRoles = ['owner', 'manager', 'space_manager'];
-    if (!validRoles.includes(role)) {
+    // Validate user_role
+    const validRoles = ['owner', 'manager', 'space_manager', 'read_only'];
+    if (!validRoles.includes(user_role)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid role. Must be one of: owner, manager, space_manager' }),
+        JSON.stringify({ error: 'Invalid user_role. Must be one of: owner, manager, space_manager, read_only' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -97,12 +97,12 @@ serve(async (req) => {
       );
     }
 
-    // Update the user's profile with the specified role and additional info
+    // Update the user's profile with the specified user_role and additional info
     if (newUser.user) {
       const { error: profileUpdateError } = await supabaseClient
         .from('profiles')
         .update({ 
-          user_role: role,
+          user_role: user_role,
           full_name: full_name || username,
           email: userEmail,
           phone: phone || null,
@@ -117,7 +117,7 @@ serve(async (req) => {
           .from('profiles')
           .insert({
             id: newUser.user.id,
-            user_role: role,
+            user_role: user_role,
             full_name: full_name || username,
             email: userEmail,
             phone: phone || null,
@@ -139,7 +139,7 @@ serve(async (req) => {
           username: username,
           full_name: full_name || username,
           phone: phone || null,
-          role: role
+          user_role: user_role
         }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -23,8 +23,7 @@ export const SimpleDebugger = () => {
       results.auth = {
         user: user ? {
           id: user.id,
-          email: user.email,
-          role: user.role
+          email: user.email
         } : null,
         profile: profile,
         isAdmin,

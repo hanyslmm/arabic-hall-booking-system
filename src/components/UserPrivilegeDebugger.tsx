@@ -94,7 +94,6 @@ export const UserPrivilegeDebugger = () => {
           <div className="space-y-1 text-sm">
             <p><strong>Email:</strong> {user?.email || 'Not logged in'}</p>
             <p><strong>User ID:</strong> {user?.id || 'N/A'}</p>
-            <p><strong>Profile Role:</strong> {profile?.role || 'N/A'}</p>
             <p><strong>User Role:</strong> {profile?.user_role || 'N/A'}</p>
             <div className="flex gap-2 mt-2">
               <Badge variant={isAdmin ? "default" : "outline"}>

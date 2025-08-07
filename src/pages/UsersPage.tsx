@@ -79,8 +79,8 @@ export default function UsersPage() {
     }
   };
 
-  const getRoleBadge = (role?: string) => {
-    switch (role) {
+  const getRoleBadge = (user_role?: string) => {
+    switch (user_role) {
       case "owner":
         return (
           <Badge variant="destructive" className="text-xs flex items-center gap-1">
@@ -100,6 +100,13 @@ export default function UsersPage() {
           <Badge variant="outline" className="text-xs flex items-center gap-1">
             <Shield className="w-3 h-3" />
             مدير قاعات
+          </Badge>
+        );
+      case "read_only":
+        return (
+          <Badge variant="outline" className="text-xs flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            قراءة فقط
           </Badge>
         );
       default:
