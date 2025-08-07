@@ -13,7 +13,13 @@ export default defineConfig(({ mode }) => ({
   preview: {
     host: "::",
     port: 8080,
-    allowedHosts: "all",
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "arabic-hall-booking-system.onrender.com",
+      ".lovable.dev",
+      ".lovableproject.com"
+    ],
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
