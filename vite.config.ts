@@ -8,11 +8,17 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: "all"
   },
   preview: {
     host: "::",
     port: 8080,
-    allowedHosts: "all"
+    allowedHosts: "all",
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
   },
   plugins: [
     react(),
@@ -24,4 +30,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Additional configuration for deployment environments
+  define: {
+    global: 'globalThis',
+  }
 }));
