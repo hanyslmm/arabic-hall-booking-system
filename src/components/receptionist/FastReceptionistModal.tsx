@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, UserPlus, CreditCard, Clock, Phone, MapPin, Hash, Scan } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { studentsApi, studentRegistrationsApi, paymentsApi } from '@/api/students';
+import { attendanceApi } from '@/api/students';
 import { format } from 'date-fns';
 import { Scanner } from '@alzera/react-scanner';
 interface FastReceptionistModalProps {
@@ -85,6 +86,19 @@ const queryClient = useQueryClient();
     },
     onError: (error) => {
       toast({ title: 'خطأ في إضافة الدفعة', description: String(error), variant: 'destructive' });
+    }
+  });
+
+  const attendanceMutation = useMutation({
+    mutationFn: async (registrationId: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      return await attendanceApi.markPresentForDate(registrationId, today);
+    },
+    onSuccess: () => {
+      toast({ title: 'تم تسجيل الحضور اليوم', description: 'تم وضع علامة حضور لهذا التسجيل' });
+    },
+    onError: (error) => {
+      toast({ title: 'خطأ في تسجيل الحضور', description: String(error), variant: 'destructive' });
     }
   });
 
@@ -333,6 +347,17 @@ const queryClient = useQueryClient();
                                   <span className="font-medium">
                                     المتبقي: {(reg.total_fees - reg.paid_amount)} LE
                                   </span>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2 pt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => attendanceMutation.mutate(reg.id)}
+                                    disabled={attendanceMutation.isPending}
+                                  >
+                                    وضع حضور اليوم
+                                  </Button>
                                 </div>
                               </div>
                             </CardContent>

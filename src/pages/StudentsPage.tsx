@@ -17,6 +17,9 @@ import { toast } from "sonner";
 import { formatShortArabicDate } from "@/utils/dateUtils";
 import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 import { Scanner } from '@alzera/react-scanner';
+import { useDebounce } from '@/hooks/useDebounce';
+
+const PAGE_SIZE = 50;
 const StudentsPage = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -26,16 +29,24 @@ const StudentsPage = () => {
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showScanner, setShowScanner] = useState(false);
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
-  const { data: students = [], isLoading, error } = useQuery({
-    queryKey: ["students"],
-    queryFn: studentsApi.getAll,
+  const { data, isLoading, error, isFetching } = useQuery({
+    queryKey: ["students", page, debouncedSearch],
+    queryFn: async () => {
+      return await studentsApi.getPaginated({ page, pageSize: PAGE_SIZE, searchTerm: debouncedSearch || undefined });
+    },
+    keepPreviousData: true,
   });
+  const students = data?.data || [];
+  const total = data?.total || 0;
 
   const searchMutation = useMutation({
     mutationFn: studentsApi.search,
     onSuccess: (searchResults) => {
-      queryClient.setQueryData(["students"], searchResults);
+      // For compatibility; but main list uses server-side search via debouncedSearch
+      queryClient.setQueryData(["students", page, debouncedSearch], { data: searchResults, total: searchResults.length });
     },
     onError: () => {
       toast.error("فشل في البحث عن الطالب");
@@ -77,11 +88,7 @@ const StudentsPage = () => {
   });
 
   const handleSearch = () => {
-    if (searchTerm.trim()) {
-      searchMutation.mutate(searchTerm.trim());
-    } else {
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-    }
+    setPage(1);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -92,7 +99,7 @@ const StudentsPage = () => {
 
   const resetSearch = () => {
     setSearchTerm("");
-    queryClient.invalidateQueries({ queryKey: ["students"] });
+    setPage(1);
   };
 
   const canManageStudents = profile?.user_role && ['owner', 'manager'].includes(profile.user_role);
@@ -353,13 +360,17 @@ const StudentsPage = () => {
           data={students}
           columns={studentColumns}
           actions={studentActions}
-          title={`قائمة الطلاب (${students.length})`}
-          isLoading={false}
+          title={`قائمة الطلاب (${total})`}
+          isLoading={isLoading || isFetching}
           emptyMessage="لا توجد طلاب مسجلين"
           emptyIcon={<Users className="h-12 w-12 text-muted-foreground mx-auto" />}
           getRowKey={(student) => student.id}
           expandedContent={renderExpandedStudentContent}
-          itemsPerPage={50}
+          itemsPerPage={PAGE_SIZE}
+          serverSide
+          totalItems={total}
+          currentPage={page}
+          onPageChange={setPage}
         />
 
         {/* Modals */}

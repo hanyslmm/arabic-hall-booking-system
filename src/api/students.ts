@@ -74,6 +74,30 @@ export const studentsApi = {
     return data as Student[];
   },
 
+  async getPaginated(params: { page: number; pageSize: number; searchTerm?: string }): Promise<{ data: Student[]; total: number; }>{
+    const { page, pageSize, searchTerm } = params;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from("students")
+      .select("*", { count: 'exact' })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (searchTerm && searchTerm.trim().length > 0) {
+      const term = searchTerm.trim();
+      // Search by serial_number, name, or mobile_phone
+      query = query.or(
+        `serial_number.ilike.%${term}%,name.ilike.%${term}%,mobile_phone.ilike.%${term}%`
+      );
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+    return { data: (data as Student[]) || [], total: count || 0 };
+  },
+
   async create(studentData: {
     name: string;
     mobile_phone: string;
@@ -285,6 +309,45 @@ export const attendanceApi = {
     
     if (error) throw error;
     return data as AttendanceRecord[];
+  },
+
+  async markPresentForDate(registrationId: string, attendanceDate: string): Promise<AttendanceRecord> {
+    // Check if a record exists for this registration and date
+    const { data: existing, error: selectError } = await supabase
+      .from("attendance_records")
+      .select("id, status")
+      .eq("student_registration_id", registrationId)
+      .eq("attendance_date", attendanceDate)
+      .maybeSingle();
+    if (selectError) throw selectError;
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .update({ status: 'present' })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as AttendanceRecord;
+    }
+
+    // Otherwise create a new record
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error("غير مصرح");
+
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .insert([{ 
+        student_registration_id: registrationId,
+        attendance_date: attendanceDate,
+        status: 'present',
+        created_by: user.user.id,
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as AttendanceRecord;
   },
 
   async create(attendanceData: {

@@ -46,6 +46,11 @@ interface MobileResponsiveTableProps<T> {
   expandedContent?: (item: T) => React.ReactNode;
   itemsPerPage?: number;
   className?: string;
+  // Server-side pagination support (optional)
+  serverSide?: boolean;
+  totalItems?: number;
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function MobileResponsiveTable<T>({
@@ -59,24 +64,54 @@ export function MobileResponsiveTable<T>({
   getRowKey,
   expandedContent,
   itemsPerPage = 10,
-  className
+  className,
+  serverSide = false,
+  totalItems: totalItemsProp,
+  currentPage: currentPageProp,
+  onPageChange,
 }: MobileResponsiveTableProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
   
   const {
-    currentData,
-    currentPage,
-    totalPages,
-    goToPage,
-    nextPage,
-    prevPage,
-    canGoNext,
-    canGoPrev,
-    startIndex,
-    endIndex,
-    totalItems
+    currentData: clientCurrentData,
+    currentPage: clientCurrentPage,
+    totalPages: clientTotalPages,
+    goToPage: clientGoToPage,
+    nextPage: clientNextPage,
+    prevPage: clientPrevPage,
+    canGoNext: clientCanGoNext,
+    canGoPrev: clientCanGoPrev,
+    startIndex: clientStartIndex,
+    endIndex: clientEndIndex,
+    totalItems: clientTotalItems
   } = usePagination({ data, itemsPerPage });
+
+  // Derive pagination values depending on mode
+  const totalItems = serverSide ? (totalItemsProp || 0) : clientTotalItems;
+  const totalPages = serverSide ? Math.max(1, Math.ceil((totalItems || 0) / itemsPerPage)) : clientTotalPages;
+  const currentPage = serverSide ? (currentPageProp || 1) : clientCurrentPage;
+  const currentData = serverSide ? data : clientCurrentData;
+
+  const goToPage = (page: number) => {
+    if (serverSide) {
+      onPageChange && onPageChange(page);
+    } else {
+      clientGoToPage(page);
+    }
+  };
+
+  const nextPage = () => goToPage(Math.min(currentPage + 1, totalPages));
+  const prevPage = () => goToPage(Math.max(currentPage - 1, 1));
+  const canGoNext = currentPage < totalPages;
+  const canGoPrev = currentPage > 1;
+
+  const startIndex = serverSide
+    ? Math.min((currentPage - 1) * itemsPerPage + 1, Math.max(totalItems, 1))
+    : clientStartIndex;
+  const endIndex = serverSide
+    ? Math.min(startIndex + (currentData?.length || 0) - 1, totalItems)
+    : clientEndIndex;
 
   const toggleRowExpansion = (rowKey: string) => {
     const newExpanded = new Set(expandedRows);
