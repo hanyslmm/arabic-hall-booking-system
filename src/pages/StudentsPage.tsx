@@ -4,10 +4,9 @@ import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AddStudentModal } from "@/components/student/AddStudentModal";
 import { EditStudentModal } from "@/components/student/EditStudentModal";
@@ -26,6 +25,7 @@ const StudentsPage = () => {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showEnhancedBulkUpload, setShowEnhancedBulkUpload] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showScanner, setShowScanner] = useState(false);
 
@@ -154,7 +154,25 @@ const StudentsPage = () => {
     },
   ];
 
-  // Render expanded content for each student
+  // Table actions for edit/delete
+  const studentActions: TableAction<Student>[] = canManageStudents ? [
+    {
+      label: 'تعديل',
+      onClick: (student) => setEditingStudent(student),
+      variant: 'outline',
+      size: 'sm',
+      icon: <Edit className="h-4 w-4" />,
+    },
+    {
+      label: 'حذف',
+      onClick: (student) => setConfirmDeleteStudent(student),
+      variant: 'destructive',
+      size: 'sm',
+      icon: <Trash2 className="h-4 w-4" />,
+    },
+  ] : [];
+
+  // Render expanded content for each student (details only)
   const renderExpandedStudentContent = (student: Student) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
       <div className="space-y-2">
@@ -188,53 +206,6 @@ const StudentsPage = () => {
           </div>
         </div>
       </div>
-
-      {canManageStudents && (
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm">الإجراءات</h4>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingStudent(student)}
-              className="justify-start"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              تعديل
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="justify-start"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  حذف
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    هل أنت متأكد من حذف الطالب "{student.name}"؟ 
-                    هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع تسجيلاته وحضوره ومدفوعاته.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteMutation.mutate(student.id)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    حذف
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -279,7 +250,7 @@ const StudentsPage = () => {
       
       <main className="container mx-auto p-4 pt-20 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
               <Users className="h-8 w-8" />
@@ -291,7 +262,7 @@ const StudentsPage = () => {
           </div>
           
           {canManageStudents && (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Button
                 onClick={() => setShowEnhancedBulkUpload(true)}
                 variant="default"
@@ -387,9 +358,10 @@ const StudentsPage = () => {
         </Card>
 
         {/* Students Table */}
-                  <MobileResponsiveTable
+        <MobileResponsiveTable
           data={students}
           columns={studentColumns}
+          actions={studentActions}
           title={`قائمة الطلاب (${students.length})`}
           isLoading={false}
           emptyMessage="لا توجد طلاب مسجلين"
@@ -424,6 +396,32 @@ const StudentsPage = () => {
             onClose={() => setEditingStudent(null)}
           />
         )}
+
+        {/* Delete confirmation */}
+        <AlertDialog open={!!confirmDeleteStudent} onOpenChange={(open) => { if (!open) setConfirmDeleteStudent(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد من حذف الطالب "{confirmDeleteStudent?.name}"؟ هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع تسجيلاته وحضوره ومدفوعاته.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmDeleteStudent) {
+                    deleteMutation.mutate(confirmDeleteStudent.id);
+                  }
+                  setConfirmDeleteStudent(null);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                حذف
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );

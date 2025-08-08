@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, GraduationCap, Download, Upload, Phone, BookOpen, Calendar, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Trash2, GraduationCap, Upload, Phone, BookOpen, Calendar } from "lucide-react";
 import { AddTeacherModal } from "@/components/teacher/AddTeacherModal";
 import { EditTeacherModal } from "@/components/teacher/EditTeacherModal";
 import { TeacherCodeManager } from "@/components/teacher/TeacherCodeManager";
@@ -16,7 +15,7 @@ import { getTeachers, deleteTeacher } from "@/api/teachers";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface Teacher {
   id: string;
@@ -35,6 +34,7 @@ const TeachersPage = () => {
   const [showAddTeacher, setShowAddTeacher] = useState(false);
   const [showEditTeacher, setShowEditTeacher] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [confirmDeleteTeacher, setConfirmDeleteTeacher] = useState<Teacher | null>(null);
   const { profile, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -59,7 +59,7 @@ const TeachersPage = () => {
     onError: (error) => {
       toast({
         title: "خطأ في حذف المعلم",
-        description: error.message,
+        description: (error as Error).message,
         variant: "destructive",
       });
     },
@@ -123,7 +123,28 @@ const TeachersPage = () => {
     },
   ];
 
-  // Render expanded content for each teacher
+  // Table actions
+  const teacherActions: TableAction<Teacher>[] = canManage ? [
+    {
+      label: 'تعديل',
+      onClick: (teacher) => {
+        setSelectedTeacher(teacher);
+        setShowEditTeacher(true);
+      },
+      variant: 'outline',
+      size: 'sm',
+      icon: <Edit className="h-4 w-4" />,
+    },
+    {
+      label: 'حذف',
+      onClick: (teacher) => setConfirmDeleteTeacher(teacher),
+      variant: 'destructive',
+      size: 'sm',
+      icon: <Trash2 className="h-4 w-4" />,
+    },
+  ] : [];
+
+  // Render expanded content for each teacher (details only)
   const renderExpandedTeacherContent = (teacher: Teacher) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
       <div className="space-y-2">
@@ -163,56 +184,6 @@ const TeachersPage = () => {
           </div>
         </div>
       </div>
-
-      {canManage && (
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm">الإجراءات</h4>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedTeacher(teacher);
-                setShowEditTeacher(true);
-              }}
-              className="justify-start"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              تعديل
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="justify-start"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  حذف
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    هل أنت متأكد من حذف المعلم "{teacher.name}"؟
-                    هذا الإجراء لا يمكن التراجع عنه.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteTeacherMutation.mutate(teacher.id)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    حذف
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -339,7 +310,7 @@ const TeachersPage = () => {
       />
       
       <main className="container mx-auto p-4 pt-20 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary">إدارة المعلمين</h1>
             <p className="text-muted-foreground mt-2">
@@ -368,9 +339,10 @@ const TeachersPage = () => {
           </div>
         </div>
 
-                  <MobileResponsiveTable
+        <MobileResponsiveTable
           data={teachers || []}
           columns={teacherColumns}
+          actions={teacherActions}
           title="قائمة المعلمين"
           isLoading={isLoading}
           emptyMessage="لم يتم إضافة أي معلمين بعد"
@@ -396,6 +368,32 @@ const TeachersPage = () => {
             />
           </>
         )}
+
+        {/* Delete confirmation */}
+        <AlertDialog open={!!confirmDeleteTeacher} onOpenChange={(open) => { if (!open) setConfirmDeleteTeacher(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد من حذف المعلم "{confirmDeleteTeacher?.name}"؟ هذا الإجراء لا يمكن التراجع عنه.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmDeleteTeacher) {
+                    deleteTeacherMutation.mutate(confirmDeleteTeacher.id);
+                  }
+                  setConfirmDeleteTeacher(null);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                حذف
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
