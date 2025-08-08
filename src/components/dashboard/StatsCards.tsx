@@ -53,19 +53,12 @@ export const StatsCards = ({
     }
   });
 
-  // Current month earnings from payment_records
+  // Current month earnings with robust fallback (no 1000-row cap)
   const { data: monthlyEarnings } = useQuery({
     queryKey: ['monthly-earnings'],
     queryFn: async () => {
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .rpc('get_payments_sum', { start_date: startDate, end_date: endDate });
-
-      if (error) throw error;
-      return Number(data || 0);
+      const { fetchMonthlyEarnings } = await import('@/utils/finance');
+      return await fetchMonthlyEarnings();
     }
   });
 

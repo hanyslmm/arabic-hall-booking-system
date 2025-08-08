@@ -122,20 +122,13 @@ export const studentsApi = {
     return data as Student;
   },
 
-  async update(id: string, updates: Partial<{
-    name: string;
-    mobile_phone: string;
-    parent_phone: string;
-    city: string;
-    serial_number: string;
-  }>): Promise<Student> {
+  async update(id: string, updates: Partial<Student>): Promise<Student> {
     const { data, error } = await supabase
       .from("students")
       .update(updates)
       .eq("id", id)
       .select()
       .single();
-    
     if (error) throw error;
     return data as Student;
   },
@@ -146,12 +139,24 @@ export const studentsApi = {
     return id;
   },
 
-  async search(searchTerm: string): Promise<Student[]> {
+  async search(term: string): Promise<Student[]> {
     const { data, error } = await supabase
-      .rpc('search_student', { search_term: searchTerm });
-    
+      .from("students")
+      .select("*")
+      .or(`serial_number.ilike.%${term}%,name.ilike.%${term}%,mobile_phone.ilike.%${term}%`)
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return data as Student[];
+  },
+
+  async getById(id: string): Promise<Student | null> {
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (error) return null;
+    return data as Student;
   },
 
   async bulkCreate(students: {

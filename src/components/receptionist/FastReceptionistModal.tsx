@@ -16,6 +16,7 @@ import { Scanner } from '@alzera/react-scanner';
 interface FastReceptionistModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialStudentId?: string;
 }
 
 interface StudentInfo {
@@ -41,7 +42,7 @@ interface StudentInfo {
   }>;
 }
 
-export function FastReceptionistModal({ isOpen, onClose }: FastReceptionistModalProps) {
+export function FastReceptionistModal({ isOpen, onClose, initialStudentId }: FastReceptionistModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<StudentInfo | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -50,6 +51,25 @@ export function FastReceptionistModal({ isOpen, onClose }: FastReceptionistModal
   const { toast } = useToast();
 const queryClient = useQueryClient();
   const [showScanner, setShowScanner] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function preload() {
+      if (isOpen && initialStudentId && !selectedStudent) {
+        try {
+          const { studentsApi } = await import('@/api/students');
+          const s = await studentsApi.getById(initialStudentId);
+          if (!cancelled && s) {
+            setSelectedStudent(s as any);
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+    }
+    preload();
+    return () => { cancelled = true; };
+  }, [isOpen, initialStudentId]);
   // Search students by serial or mobile
   const { data: searchResults, isLoading: searching } = useQuery({
     queryKey: ['student-search', searchTerm],

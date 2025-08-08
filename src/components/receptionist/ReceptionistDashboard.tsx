@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function ReceptionistDashboard() {
   const [showFastModal, setShowFastModal] = useState(false);
+  const [fastModalStudentId, setFastModalStudentId] = useState<string | undefined>(undefined);
 
   // Get today's registrations count using server-side count (no 1000-row cap)
   const { data: todayRegistrationsCount = 0 } = useQuery({
@@ -83,19 +84,12 @@ export function ReceptionistDashboard() {
     queryFn: hallsApi.getAll
   });
 
-  // Current month earnings (sum of payment_records.amount for this month)
+  // Current month earnings with robust fallback (no 1000-row cap)
   const { data: monthlyEarnings } = useQuery({
     queryKey: ['monthly-earnings'],
     queryFn: async () => {
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .rpc('get_payments_sum', { start_date: startDate, end_date: endDate });
-
-      if (error) throw error;
-      return Number(data || 0);
+      const { fetchMonthlyEarnings } = await import('@/utils/finance');
+      return await fetchMonthlyEarnings();
     }
   });
 
@@ -240,6 +234,9 @@ export function ReceptionistDashboard() {
               <Clock className="h-5 w-5" />
               الدفعات المعلقة - تحتاج متابعة
             </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              تظهر هنا التسجيلات التي لم تُسدَّد رسومها بالكامل. انقر "تحصيل" لاتخاذ الإجراء الآن.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-60 overflow-y-auto">
@@ -258,6 +255,11 @@ export function ReceptionistDashboard() {
                     <div className="text-sm text-muted-foreground mt-1">
                       المتبقي: {reg.total_fees - reg.paid_amount} LE
                     </div>
+                    <div className="mt-2">
+                      <Button size="sm" onClick={() => { setFastModalStudentId(reg.student_id); setShowFastModal(true); }}>
+                        تحصيل
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -275,7 +277,8 @@ export function ReceptionistDashboard() {
 
       <FastReceptionistModal 
         isOpen={showFastModal} 
-        onClose={() => setShowFastModal(false)} 
+        onClose={() => { setShowFastModal(false); setFastModalStudentId(undefined); }} 
+        initialStudentId={fastModalStudentId}
       />
     </div>
   );
