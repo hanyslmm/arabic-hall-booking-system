@@ -78,6 +78,7 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
   const [showHallSelectionDialog, setShowHallSelectionDialog] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('append');
   const [showUploadModeDialog, setShowUploadModeDialog] = useState(false);
+  const [defaultHallId, setDefaultHallId] = useState<string | undefined>(undefined);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -147,6 +148,8 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
           const timeHour = parseInt(timePart);
           const actualHour = finalAmPm === 'PM' && timeHour !== 12 ? timeHour + 12 : 
                            finalAmPm === 'AM' && timeHour === 12 ? 0 : timeHour;
+          // Display hour should always be 12-hour format (1..12)
+          const displayHour12 = ((timeHour + 11) % 12) + 1;
 
           let daysArray: string[] = [];
           switch (daysPart) {
@@ -165,7 +168,8 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
 
           // Find or create booking
           const startTime = `${actualHour.toString().padStart(2, '0')}:00:00`;
-          const fullClassCode = `${classCode}_${finalAmPm}`;
+          // Build class code using 12-hour format with AM/PM, e.g., B_SAT_1_PM
+          const fullClassCode = `${teacherCode}_${daysPart}_${displayHour12}_${finalAmPm}`;
 
           // First, find existing booking with this class code
           const { data: existingBookings } = await supabase
@@ -639,6 +643,7 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
       }));
       
       setHallSelections(hallSelectionsNeeded);
+      setDefaultHallId(halls?.[0]?.id);
 
       if (clarificationsNeeded.length > 0) {
         setShowClarificationDialog(true);
@@ -682,6 +687,11 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
           : selection
       )
     );
+  };
+
+  const applyDefaultHallToAll = () => {
+    if (!defaultHallId) return;
+    setHallSelections(prev => prev.map(s => ({ ...s, selectedHallId: defaultHallId })));
   };
 
   const handleUploadModeSelection = (mode: UploadMode) => {
@@ -734,6 +744,7 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
     setShowHallSelectionDialog(false);
     setUploadMode('append');
     setShowUploadModeDialog(false);
+    setDefaultHallId(undefined);
     setOpen(false);
   };
 
@@ -876,6 +887,30 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
                 <p className="text-sm text-muted-foreground">
                   يرجى اختيار القاعة المناسبة لكل مجموعة:
                 </p>
+                <div className="flex items-center gap-3 p-3 border rounded bg-muted/30">
+                  <span className="font-medium">القاعة الافتراضية لكل المجموعات</span>
+                  <div className="min-w-[200px]">
+                    <Select
+                      value={defaultHallId || ''}
+                      onValueChange={(value) => setDefaultHallId(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر القاعة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(halls || []).map((hall) => (
+                          <SelectItem key={hall.id} value={hall.id}>
+                            {hall.name} (سعة {hall.capacity} طالب)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={applyDefaultHallToAll} disabled={!defaultHallId}>
+                    تطبيق على الكل
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">سيتم تعيين هذه القاعة لجميع المجموعات، ويمكنك تعديل أي مجموعة بشكل فردي أدناه.</p>
                 {hallSelections.map((selection) => (
                   <div key={selection.classCode} className="flex items-center justify-between p-3 border rounded">
                     <span className="font-medium">{selection.classCode}</span>
