@@ -599,33 +599,9 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
       );
     });
     
-    // Helper function to extract number from value
+    // Helper function to extract number from value using robust parsing
     const extractNumber = (value: any): number => {
-      if (value === undefined || value === null || value === '') {
-        return 0;
-      }
-      
-      const str = value.toString();
-      console.log(`Extracting number from: "${str}"`);
-      
-      // Handle cases where the value is already a number
-      if (typeof value === 'number' && !isNaN(value)) {
-        console.log(`Direct number: ${value}`);
-        return Math.max(0, value);
-      }
-      
-      // Extract all digits from the string
-      const digits = str.replace(/\D/g, '');
-      console.log(`Extracted digits: "${digits}"`);
-      
-      if (digits === '') {
-        return 0;
-      }
-      
-      const num = Number(digits);
-      console.log(`Parsed number: ${num}`);
-      
-      return isNaN(num) ? 0 : Math.max(0, num);
+      return parseNumeric(value);
     };
     
     // Check exact matches first

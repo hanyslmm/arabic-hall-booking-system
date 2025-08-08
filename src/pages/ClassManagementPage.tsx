@@ -372,7 +372,7 @@ export default function ClassManagementPage() {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto py-8">
+        <div className="container mx-auto py-8 pt-20">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-destructive">الحجز غير موجود</h1>
           </div>
@@ -392,7 +392,7 @@ export default function ClassManagementPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 pt-20">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" onClick={() => navigate('/bookings')}>
             <ArrowLeft className="h-4 w-4 ml-2" />
