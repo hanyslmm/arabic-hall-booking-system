@@ -571,69 +571,46 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
   };
 
   const getPaymentValue = (row: any, primaryColumn: string): number => {
-    // Check the primary column first, then fallbacks
-    const possibleColumns = [
-      primaryColumn, 
-      'Payment', 
-      'payment', 
-      'المدفوع', 
-      'مدفوع',
-      'الرسوم',
-      'رسوم',
-      'Fee',
-      'Fees',
-      'fees',
-      'Amount',
-      'amount',
-      'Dars',
-      'dars'
+    // Only consider columns that explicitly indicate a payment/fees value
+    const normalize = (s: string) => (s || '').toString().trim().toLowerCase();
+
+    const allowedKeywords = [
+      'dars', 'الرسوم', 'رسوم', 'payment', 'paid', 'المدفوع', 'مدفوع',
+      'fee', 'fees', 'amount', 'المبلغ', 'مبلغ'
     ];
-    
-    // Also check for columns that contain these keywords
-    const allColumns = Object.keys(row);
-    const matchingColumns = allColumns.filter(col => {
-      const colLower = col.toLowerCase();
-      return possibleColumns.some(possible => 
-        colLower.includes(possible.toLowerCase()) || 
-        possible.toLowerCase().includes(colLower)
-      );
-    });
-    
-    // Helper function to extract number from value using robust parsing
-    const extractNumber = (value: any): number => {
-      return parseNumeric(value);
+
+    // Explicit non-payment columns to ignore even if they partially match any keyword
+    // This prevents false positives like "AM" (time) matching "Amount"
+    const bannedKeywords = [
+      'class', 'time', 'am', 'pm', 'hour', 'teacher', 'day', 'date',
+      'name', 'mobile', 'home', 'city', 'serial', 'hall', 'code'
+    ];
+
+    const isAllowedHeader = (header: string) => {
+      const h = normalize(header);
+      if (bannedKeywords.some((b) => h === b || h.includes(b))) return false;
+      return allowedKeywords.some((k) => h.includes(k));
     };
-    
-    // Check exact matches first
-    for (const col of possibleColumns) {
-      if (row[col] !== undefined && row[col] !== null && row[col] !== '') {
-        const num = extractNumber(row[col]);
-        if (num > 0) {
-          console.log(`Found payment in exact column "${col}": ${num} (original value: "${row[col]}")`);
-          return num;
-        }
-      }
+
+    const extractNumber = (value: any): number => parseNumeric(value);
+
+    // 1) Check the provided primary column if it looks like a payment column
+    if (primaryColumn && row[primaryColumn] !== undefined && isAllowedHeader(primaryColumn)) {
+      const num = extractNumber(row[primaryColumn]);
+      if (!isNaN(num) && num > 0) return num;
     }
-    
-    // Then check partial matches
-    for (const col of matchingColumns) {
-      if (row[col] !== undefined && row[col] !== null && row[col] !== '') {
-        const num = extractNumber(row[col]);
-        if (num > 0) {
-          console.log(`Found payment in matching column "${col}": ${num} (original value: "${row[col]}")`);
-          return num;
-        }
-      }
+
+    // 2) Scan all headers that explicitly look like payment columns
+    const keys = Object.keys(row).filter(isAllowedHeader);
+    for (const key of keys) {
+      const num = extractNumber(row[key]);
+      if (!isNaN(num) && num > 0) return num;
     }
-    
-    // Debug: Log all available columns and their values if no payment found
-    console.log(`No payment found for row. Available columns and values:`);
-    Object.keys(row).forEach(key => {
-      console.log(`  "${key}": "${row[key]}" (type: ${typeof row[key]})`);
-    });
-    
+
+    // Nothing valid found
     return 0;
   };
+
 
   const handleHallSelection = (sheetName: string, hallId: string) => {
     setHallSelections(prev => 
