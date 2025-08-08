@@ -10,8 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AddStudentModal } from "@/components/student/AddStudentModal";
 import { EditStudentModal } from "@/components/student/EditStudentModal";
-import { BulkUploadModal } from "@/components/student/BulkUploadModal";
-import { EnhancedBulkUploadModal } from "@/components/student/EnhancedBulkUploadModal";
+import { BulkUploadModal } from "@/components/student/EnhancedBulkUploadModal";
 import { studentsApi, Student } from "@/api/students";
 import { Plus, Search, Scan, Upload, Edit, Trash2, Users, Phone, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +22,6 @@ const StudentsPage = () => {
   const queryClient = useQueryClient();
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [showEnhancedBulkUpload, setShowEnhancedBulkUpload] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -264,21 +262,14 @@ const StudentsPage = () => {
           {canManageStudents && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Button
-                onClick={() => setShowEnhancedBulkUpload(true)}
+                onClick={() => setShowBulkUpload(true)}
                 variant="default"
                 className="flex items-center gap-2"
               >
                 <Upload className="h-4 w-4" />
                 رفع جداول المعلمين
               </Button>
-              <Button
-                onClick={() => setShowBulkUpload(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                رفع ملف Excel بسيط
-              </Button>
+              
               <Button
                 onClick={() => setShowAddStudent(true)}
                 className="flex items-center gap-2"
@@ -380,14 +371,9 @@ const StudentsPage = () => {
         <BulkUploadModal 
           isOpen={showBulkUpload}
           onClose={() => setShowBulkUpload(false)}
-          onUpload={(students) => bulkUploadMutation.mutate(students)}
-          defaultClassFees={0}
         />
 
-        <EnhancedBulkUploadModal 
-          isOpen={showEnhancedBulkUpload}
-          onClose={() => setShowEnhancedBulkUpload(false)}
-        />
+        
         
         {editingStudent && (
           <EditStudentModal 

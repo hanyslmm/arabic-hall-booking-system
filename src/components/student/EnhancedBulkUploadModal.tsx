@@ -35,7 +35,8 @@ interface StudentDataRow {
   mobile: string;
   home: string; // parent mobile
   city: string;
-  payment: number; // from "Dars" column
+  payment: number; // total across monthly payments or single "Dars"
+  monthlyPayments?: Record<string, number>; // key: YYYY-MM, value: amount
 }
 
 interface ProcessingProgress {
@@ -51,7 +52,7 @@ interface HallSelection {
   selectedHallId?: string;
 }
 
-export function EnhancedBulkUploadModal({ isOpen, onClose }: EnhancedBulkUploadModalProps) {
+export function BulkUploadModal({ isOpen, onClose }: EnhancedBulkUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedClassData[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -254,14 +255,29 @@ export function EnhancedBulkUploadModal({ isOpen, onClose }: EnhancedBulkUploadM
           notes: `Bulk upload from ${classData.sheetName} - ${new Date().toISOString().split('T')[0]}`
         });
 
-        // Create payment record if payment > 0
-        if (studentData.payment > 0) {
+        // Monthly payments: if provided, create one payment per month; else create a single payment for current month
+        if (studentData.monthlyPayments && Object.keys(studentData.monthlyPayments).length > 0) {
+          for (const ym of Object.keys(studentData.monthlyPayments)) {
+            const amount = studentData.monthlyPayments[ym] || 0;
+            if (amount > 0) {
+              await paymentsApi.create({
+                student_registration_id: registration.id,
+                amount,
+                payment_date: `${ym}-01`,
+                payment_method: 'cash',
+                notes: `دفعة شهر ${ym} - مستورد من ${classData.sheetName}`
+              });
+            }
+          }
+        } else if (studentData.payment > 0) {
+          const now = new Date();
+          const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
           await paymentsApi.create({
             student_registration_id: registration.id,
             amount: studentData.payment,
-            payment_date: new Date().toISOString().split('T')[0],
+            payment_date: `${currentYm}-01`,
             payment_method: 'cash',
-            notes: `Bulk upload payment from ${classData.sheetName} - ${new Date().toISOString().split('T')[0]}`
+            notes: `دفعة شهر ${currentYm} - مستورد من ${classData.sheetName}`
           });
         }
       }
@@ -337,87 +353,138 @@ export function EnhancedBulkUploadModal({ isOpen, onClose }: EnhancedBulkUploadM
           errorList.push(`Cannot read sheet: ${sheetName}`);
           continue;
         }
-        
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
-        if (!Array.isArray(jsonData) || jsonData.length === 0) {
+        // Read as rows to handle multi-row headers (e.g., Month + Dars)
+        const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[];
+        if (!Array.isArray(rows) || rows.length === 0) {
           errorList.push(`Sheet "${sheetName}" is empty or contains no valid data`);
           continue;
         }
-        
-        // Debug: Log the first row to see the structure
-        if (jsonData.length > 0) {
-          console.log(`Sheet ${sheetName} first row:`, jsonData[0]);
-          console.log(`Sheet ${sheetName} keys:`, Object.keys(jsonData[0]));
-          
-          // Check for payment columns specifically
-          const paymentColumns = Object.keys(jsonData[0]).filter(key => 
-            key.toLowerCase().includes('dars') || 
-            key.includes('الرسوم') || 
-            key.includes('رسوم') ||
-            key.toLowerCase().includes('payment') ||
-            key.includes('مدفوع')
-          );
-          console.log(`Sheet ${sheetName} potential payment columns:`, paymentColumns);
-        }
+
+        const headerRow1: any[] = rows[0] || [];
+        const headerRow2: any[] = rows[1] || [];
+        const hasSecondHeader = headerRow2.some((c) => (c || '').toString().trim() !== '');
+        const headers: string[] = (hasSecondHeader ? headerRow1.map((h1, idx) => `${(h1 || '').toString()} ${(headerRow2[idx] || '').toString()}`.trim()) : headerRow1.map((h1) => (h1 || '').toString()));
+
+        // Helpers to identify columns
+        const findColumnIndex = (candidates: string[]): number => {
+          const normalizedHeaders = headers.map((h) => h.toLowerCase());
+          for (const cand of candidates) {
+            const lc = cand.toLowerCase();
+            const exactIdx = normalizedHeaders.indexOf(lc);
+            if (exactIdx !== -1) return exactIdx;
+          }
+          // Partial match
+          for (let i = 0; i < normalizedHeaders.length; i++) {
+            for (const cand of candidates) {
+              if (normalizedHeaders[i].includes(cand.toLowerCase())) return i;
+            }
+          }
+          return -1;
+        };
+
+        const nameIdx = findColumnIndex(['name', 'الاسم', 'اسم']);
+        const mobileIdx = findColumnIndex(['mobile', 'الموبايل', 'موبايل', 'جوال']);
+        const homeIdx = findColumnIndex(['home', 'المنزل', 'هاتف', 'ولي الامر', 'parent']);
+        const cityIdx = findColumnIndex(['city', 'المدينة']);
+
+        const monthMap: Record<string, number> = {
+          jan: 0, january: 0,
+          feb: 1, february: 1,
+          mar: 2, march: 2,
+          apr: 3, april: 3,
+          may: 4,
+          jun: 5, june: 5,
+          jul: 6, july: 6,
+          aug: 7, august: 7,
+          sep: 8, sept: 8, september: 8,
+          oct: 9, october: 9,
+          nov: 10, november: 10,
+          dec: 11, december: 11,
+        };
+
+        const isMonthHeader = (text: string): { monthIndex: number | null } => {
+          const t = (text || '').toString().toLowerCase();
+          for (const key of Object.keys(monthMap)) {
+            if (t.includes(key)) return { monthIndex: monthMap[key] };
+          }
+          return { monthIndex: null };
+        };
+
+        const isDarsHeader = (text: string): boolean => {
+          const t = (text || '').toString().toLowerCase();
+          return t.includes('dars') || t.includes('الرسوم') || t.includes('رسوم') || t.includes('payment') || t.includes('مدفوع') || t.includes('fee') || t.includes('amount');
+        };
+
+        const parseNumeric = (val: any): number => {
+          if (val === undefined || val === null) return 0;
+          if (typeof val === 'number') return isNaN(val) ? 0 : Math.max(0, val);
+          const cleaned = val.toString().trim();
+          if (cleaned === '') return 0;
+          const normalized = cleaned.replace(/[^0-9.,-]/g, '').replace(/,/g, '.');
+          const num = parseFloat(normalized);
+          return isNaN(num) ? 0 : Math.max(0, num);
+        };
 
         const students: StudentDataRow[] = [];
 
-        jsonData.forEach((row: any, index: number) => {
+        const dataStart = hasSecondHeader ? 2 : 1;
+        for (let r = dataStart; r < rows.length; r++) {
           try {
-            // Find name field with flexible naming
-            const nameField = row.Name || row.name || row.الاسم || row.اسم || 
-                             Object.values(row)[1]; // Fallback to second column (index 1)
-            
-            // Skip rows without names
-            if (!nameField || (typeof nameField !== 'string' && typeof nameField !== 'number')) {
-              return;
-            }
+            const row = rows[r] as any[];
+            if (!row || row.length === 0) continue;
 
-            const name = nameField.toString().trim();
-            if (!name) {
-              return;
-            }
+            const nameVal = nameIdx !== -1 ? row[nameIdx] : row[1];
+            if (!nameVal || (typeof nameVal !== 'string' && typeof nameVal !== 'number')) continue;
+            const name = nameVal.toString().trim();
+            if (!name) continue;
 
-            // Find mobile field with flexible naming
-            const mobileField = row.Mobile || row.mobile || row.الموبايل || row.موبايل || row.جوال ||
-                               Object.values(row)[2]; // Fallback to third column (index 2)
-            
-            const mobile = normalizeMobileNumber(mobileField);
-            
-            // Find home field with flexible naming
-            const homeField = row.Home || row.home || row.المنزل || row.هاتف ||
-                             Object.values(row)[3]; // Fallback to fourth column (index 3)
-            
-            const home = normalizeMobileNumber(homeField);
-            
-            // Find city field with flexible naming
-            const cityField = row.City || row.city || row.المدينة ||
-                             Object.values(row)[4]; // Fallback to fifth column (index 4)
-            
-            const city = cityField?.toString().trim() || '';
-            
-            // Try to find the payment column more intelligently
-            const paymentColumnCandidates = Object.keys(row).filter(key => {
-              const keyLower = key.toLowerCase();
-              return keyLower.includes('dars') || 
-                     keyLower.includes('الرسوم') || 
-                     keyLower.includes('رسوم') ||
-                     keyLower.includes('مدفوع') ||
-                     keyLower.includes('payment') ||
-                     keyLower.includes('fee') ||
-                     keyLower.includes('amount');
+            const mobileRaw = mobileIdx !== -1 ? row[mobileIdx] : row[2];
+            const mobile = normalizeMobileNumber(mobileRaw);
+
+            const homeRaw = homeIdx !== -1 ? row[homeIdx] : row[3];
+            const home = normalizeMobileNumber(homeRaw);
+
+            const city = cityIdx !== -1 ? (row[cityIdx]?.toString().trim() || '') : (row[4]?.toString().trim() || '');
+
+            // Build monthly payments map from headers
+            const monthly: Record<string, number> = {};
+            const now = new Date();
+            const defaultYear = now.getFullYear();
+
+            headers.forEach((header, colIdx) => {
+              const { monthIndex } = isMonthHeader(header);
+              if (monthIndex !== null && isDarsHeader(header)) {
+                const amount = parseNumeric(row[colIdx]);
+                if (amount > 0) {
+                  const ym = `${defaultYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+                  monthly[ym] = (monthly[ym] || 0) + amount;
+                }
+              }
             });
-            
-            console.log(`Row ${index + 2} payment column candidates:`, paymentColumnCandidates);
-            console.log(`Row ${index + 2} data:`, row);
-            
-            const payment = getPaymentValue(row, paymentColumnCandidates[0] || 'Dars');
+
+            // Fallback: single payment column if no monthly columns detected
+            let totalPayment = 0;
+            if (Object.keys(monthly).length === 0) {
+              // Convert headers+row to object for reuse of getPaymentValue
+              const objRow: Record<string, any> = {};
+              headers.forEach((h, i) => { objRow[h] = row[i]; });
+              const paymentColumnCandidates = headers.filter(key => {
+                const keyLower = key.toLowerCase();
+                return keyLower.includes('dars') || keyLower.includes('الرسوم') || keyLower.includes('رسوم') || keyLower.includes('مدفوع') || keyLower.includes('payment') || keyLower.includes('fee') || keyLower.includes('amount');
+              });
+              totalPayment = getPaymentValue(objRow, paymentColumnCandidates[0] || 'Dars');
+              if (totalPayment > 0) {
+                const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                monthly[ym] = totalPayment;
+              }
+            } else {
+              totalPayment = Object.values(monthly).reduce((s, v) => s + v, 0);
+            }
 
             // Validate mobile numbers
             const mobileRegex = /^01[0-9]{9}$/;
             if (mobile && !mobileRegex.test(mobile)) {
-              errorList.push(`${sheetName} - Row ${index + 2}: Invalid mobile number "${mobile}"`);
+              errorList.push(`${sheetName} - Row ${r + 1}: Invalid mobile number "${mobile}"`);
             }
 
             students.push({
@@ -425,12 +492,13 @@ export function EnhancedBulkUploadModal({ isOpen, onClose }: EnhancedBulkUploadM
               mobile,
               home,
               city,
-              payment
+              payment: totalPayment,
+              monthlyPayments: monthly
             });
           } catch (rowError) {
-            errorList.push(`${sheetName} - Row ${index + 2}: Error processing row - ${rowError}`);
+            errorList.push(`${sheetName} - Row ${r + 1}: Error processing row - ${rowError}`);
           }
-        });
+        }
 
         // Validate that we have students with required data
         if (students.length === 0) {
@@ -647,7 +715,7 @@ export function EnhancedBulkUploadModal({ isOpen, onClose }: EnhancedBulkUploadM
               <li>• B=باسم، SAT=السبت، 1=الساعة الواحدة، PM/AM=مساءً/صباحاً</li>
               <li>• استخدم PM للفترة المسائية و AM للفترة الصباحية</li>
               <li>• أعمدة مطلوبة: Name (الاسم)، Mobile (الموبايل)</li>
-              <li>• أعمدة اختيارية: Home (رقم ولي الأمر)، City (المدينة)، Dars أو الرسوم (المدفوعات)</li>
+              <li>• أعمدة اختيارية: Home (رقم ولي الأمر)، City (المدينة)، وأعمدة شهرية مثل Aug Dars, September Dars (أو أي صيغة شهر/رسوم)</li>
               <li>• يجب أن تكون أسماء الأعمدة في الصف الأول</li>
               <li>• بيانات الطلاب تبدأ من الصف الثاني</li>
             </ul>

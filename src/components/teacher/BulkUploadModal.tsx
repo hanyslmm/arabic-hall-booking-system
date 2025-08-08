@@ -451,38 +451,38 @@ export const BulkUploadModal = ({ children }: BulkUploadModalProps) => {
   };
 
   const getDarsPaymentValue = (row: any): number => {
-    // Fixed: Only accept 140 as valid payment amount from Dars column, reject all other values
-    // For array format (using column indices)
+    // Accept any valid numeric payment amount from Dars-related columns; return 0 for blanks/non-numeric
+    const parseNumeric = (val: any): number => {
+      if (val === undefined || val === null) return 0;
+      if (typeof val === 'number') return isNaN(val) ? 0 : Math.max(0, val);
+      const cleaned = val.toString().trim();
+      if (cleaned === '') return 0;
+      // Remove all non-digit characters (allow decimal comma/point)
+      const normalized = cleaned.replace(/[^0-9.,-]/g, '').replace(/,/g, '.');
+      const num = parseFloat(normalized);
+      return isNaN(num) ? 0 : Math.max(0, num);
+    };
+
     if (Array.isArray(row)) {
-      // Check multiple possible columns for "dars" payment
       // Try columns from index 5 onwards (after name, mobile, home, city)
       for (let i = 5; i < row.length; i++) {
-        const cellValue = row[i];
-        if (cellValue !== undefined && cellValue !== null && cellValue !== '') {
-          const num = Number(cellValue.toString().replace(/\D/g, ''));
-          if (!isNaN(num) && num > 0) {
-            // Only allow 140 or return 0 for any other value
-            return num === 140 ? 140 : 0;
-          }
+        const value = row[i];
+        if (value !== undefined && value !== null && value !== '') {
+          const num = parseNumeric(value);
+          if (num > 0) return num;
         }
       }
       return 0;
     }
-    
-    // For object format - look for "dars" key (case insensitive)
+
+    // For object format - look for any key containing "dars" (case-insensitive)
     for (const key in row) {
-      if (key.toLowerCase().includes('dars')) {
-        const value = row[key];
-        if (value !== undefined && value !== null && value !== '') {
-          const num = Number(value.toString().replace(/\D/g, ''));
-          if (!isNaN(num) && num > 0) {
-            // Only allow 140 or return 0 for any other value
-            return num === 140 ? 140 : 0;
-          }
-        }
+      if (key && key.toLowerCase().includes('dars')) {
+        const num = parseNumeric(row[key]);
+        if (num > 0) return num;
       }
     }
-    
+
     return 0;
   };
 
