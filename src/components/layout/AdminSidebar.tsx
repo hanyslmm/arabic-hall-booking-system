@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect } from "react";
 
 interface AdminSidebarProps {
   children: React.ReactNode;
@@ -187,6 +188,17 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
+
+  // Lock body scroll when sidebar is open (mobile drawer)
+  useEffect(() => {
+    const body = document.body;
+    if (sidebarOpen) {
+      body.classList.add("overflow-hidden");
+    } else {
+      body.classList.remove("overflow-hidden");
+    }
+    return () => body.classList.remove("overflow-hidden");
+  }, [sidebarOpen]);
 
   const getRoleBadge = (role?: string) => {
     switch (role) {

@@ -11,6 +11,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect } from "react";
 
 interface NavbarProps {
   userRole?: 'owner' | 'manager' | 'space_manager' | 'read_only';
@@ -28,6 +29,17 @@ export const Navbar = ({
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Lock body scroll when sidebar is open (mobile drawer)
+  useEffect(() => {
+    const body = document.body;
+    if (sidebarOpen) {
+      body.classList.add("overflow-hidden");
+    } else {
+      body.classList.remove("overflow-hidden");
+    }
+    return () => body.classList.remove("overflow-hidden");
+  }, [sidebarOpen]);
 
   const handleSignOut = async () => {
     setIsLoading(true);
