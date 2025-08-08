@@ -88,17 +88,14 @@ export function ReceptionistDashboard() {
     queryKey: ['monthly-earnings'],
     queryFn: async () => {
       const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString().split('T')[0];
 
       const { data, error } = await supabase
-        .from('payment_records')
-        .select('amount,payment_date')
-        .gte('payment_date', startDate)
-        .lte('payment_date', endDate);
+        .rpc('get_payments_sum', { start_date: startDate, end_date: endDate });
 
       if (error) throw error;
-      return (data || []).reduce((sum: number, r: { amount: number }) => sum + (r.amount || 0), 0);
+      return Number(data || 0);
     }
   });
 
