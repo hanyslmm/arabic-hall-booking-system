@@ -246,6 +246,31 @@ export const studentRegistrationsApi = {
     const { error } = await supabase.from("student_registrations").delete().eq("id", id);
     if (error) throw error;
     return id;
+  },
+
+  async getByMonth(year: number, month: number): Promise<StudentRegistration[]> {
+    // Create start and end dates for the month
+    const startDate = new Date(year, month - 1, 1).toISOString();
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+    
+    const { data, error } = await supabase
+      .from("student_registrations")
+      .select(`
+        *,
+        student:students(*),
+        booking:bookings(
+          *,
+          halls(name),
+          teachers(name),
+          academic_stages(name)
+        )
+      `)
+      .gte("created_at", startDate)
+      .lte("created_at", endDate)
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return data as StudentRegistration[];
   }
 };
 

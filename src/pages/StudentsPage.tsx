@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AddStudentModal } from "@/components/student/AddStudentModal";
 import { EditStudentModal } from "@/components/student/EditStudentModal";
-import { BulkUploadModal } from "@/components/student/EnhancedBulkUploadModal";
+import { BulkUploadModal } from "@/components/student/BulkUploadModal";
 import { studentsApi, Student } from "@/api/students";
 import { Plus, Search, Scan, Upload, Edit, Trash2, Users, Phone, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
