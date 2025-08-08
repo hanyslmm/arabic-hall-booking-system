@@ -10,6 +10,12 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety timeout to prevent infinite loading in edge cases
+    const safetyTimeout = window.setTimeout(() => {
+      console.warn("Auth loading exceeded expected time. Proceeding without full profile.");
+      setLoading(false);
+    }, 8000);
+
     // Get initial session
     const initializeAuth = async () => {
       try {
@@ -48,7 +54,10 @@ export const useAuth = () => {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
