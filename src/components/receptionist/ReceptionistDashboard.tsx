@@ -23,21 +23,58 @@ import { supabase } from '@/integrations/supabase/client';
 export function ReceptionistDashboard() {
   const [showFastModal, setShowFastModal] = useState(false);
 
-  // Get today's stats
-  const { data: todayRegistrations } = useQuery({
-    queryKey: ['today-registrations'],
+  // Get today's registrations count using server-side count (no 1000-row cap)
+  const { data: todayRegistrationsCount = 0 } = useQuery({
+    queryKey: ['today-registrations-count'],
     queryFn: async () => {
-      const all = await studentRegistrationsApi.getAll();
-      const today = new Date().toISOString().split('T')[0];
-      return all.filter(reg => reg.created_at.startsWith(today));
+      const now = new Date();
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0, 0, 0, 0
+      ).toISOString();
+      const endOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23, 59, 59, 999
+      ).toISOString();
+
+      const { count, error } = await supabase
+        .from('student_registrations')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
+
+      if (error) throw error;
+      return count || 0;
     }
   });
 
   const { data: pendingPayments } = useQuery({
     queryKey: ['pending-payments'],
     queryFn: async () => {
-      const all = await studentRegistrationsApi.getAll();
-      return all.filter(reg => reg.payment_status === 'pending' || reg.payment_status === 'partial');
+      const { data, error } = await supabase
+        .from('student_registrations')
+        .select('*')
+        .in('payment_status', ['pending', 'partial'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const { data: pendingPaymentsCount = 0 } = useQuery({
+    queryKey: ['pending-payments-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('student_registrations')
+        .select('*', { count: 'exact', head: true })
+        .in('payment_status', ['pending', 'partial']);
+      if (error) throw error;
+      return count || 0;
     }
   });
 
@@ -96,8 +133,6 @@ export function ReceptionistDashboard() {
     }
   ];
 
-  const todayRegistrationsCount = Math.min(todayRegistrations?.length || 0, 1000);
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -140,7 +175,7 @@ export function ReceptionistDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {pendingPayments?.length || 0}
+              {pendingPaymentsCount}
             </div>
             <p className="text-xs text-muted-foreground">
               تحتاج متابعة
@@ -211,7 +246,7 @@ export function ReceptionistDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-60 overflow-y-auto">
-              {pendingPayments.slice(0, 10).map((reg) => (
+              {pendingPayments.map((reg) => (
                 <div key={reg.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div className="space-y-1">
                     <div className="font-medium">طالب #{reg.student_id}</div>
@@ -230,10 +265,10 @@ export function ReceptionistDashboard() {
                 </div>
               ))}
             </div>
-            {pendingPayments.length > 10 && (
+            {pendingPaymentsCount > 10 && (
               <div className="text-center mt-3">
                 <Button variant="outline" onClick={() => window.location.href = '/student-registrations'}>
-                  عرض الكل ({pendingPayments.length})
+                  عرض الكل ({pendingPaymentsCount})
                 </Button>
               </div>
             )}
