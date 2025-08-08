@@ -44,6 +44,23 @@ export const updateBooking = async (id: string, updates: Partial<Tables<"booking
   return data as Booking;
 };
 
+export const setCustomFeeForBooking = async (id: string, classFees: number) => {
+  // Mark as custom and update fees; trigger will sync registrations
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ class_fees: classFees, is_custom_fee: true })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Booking;
+};
+
+export const applyBookingFeeToRegistrations = async (id: string) => {
+  const { error } = await supabase.rpc('apply_booking_fee', { p_booking_id: id });
+  if (error) throw error;
+};
+
 export const deleteBooking = async (id: string) => {
   const { error } = await supabase.from("bookings").delete().eq("id", id);
   if (error) throw error;
@@ -87,5 +104,7 @@ export const bookingsApi = {
   getByDate: getBookingsByDate,
   create: addBooking,
   update: updateBooking,
-  delete: deleteBooking
+  delete: deleteBooking,
+  setCustomFeeForBooking,
+  applyBookingFeeToRegistrations,
 };

@@ -121,6 +121,14 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('غير مصرح');
 
+      // Fetch teacher default fee to initialize class fees for this booking
+      const { data: teacherRow } = await supabase
+        .from('teachers')
+        .select('default_class_fee')
+        .eq('id', data.teacher_id)
+        .single();
+      const defaultFee = teacherRow?.default_class_fee ?? 0;
+
       const bookingData = {
         hall_id: data.hall_id,
         teacher_id: data.teacher_id,
@@ -133,6 +141,8 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
         created_by: user.user.id,
         status: 'active' as const,
         class_code: data.class_code || null,
+        class_fees: defaultFee,
+        is_custom_fee: false,
       };
 
       const { data: result, error } = await supabase

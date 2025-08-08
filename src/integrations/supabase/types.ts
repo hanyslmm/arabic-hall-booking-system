@@ -125,6 +125,7 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"] | null
           teacher_id: string
           updated_at: string | null
+          is_custom_fee: boolean | null
         }
         Insert: {
           academic_stage_id: string
@@ -142,6 +143,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"] | null
           teacher_id: string
           updated_at?: string | null
+          is_custom_fee?: boolean | null
         }
         Update: {
           academic_stage_id?: string
@@ -159,6 +161,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"] | null
           teacher_id?: string
           updated_at?: string | null
+          is_custom_fee?: boolean | null
         }
         Relationships: [
           {
@@ -586,6 +589,7 @@ export type Database = {
           subject_id: string | null
           teacher_code: string | null
           updated_at: string | null
+          default_class_fee: number | null
         }
         Insert: {
           created_at?: string | null
@@ -596,6 +600,7 @@ export type Database = {
           subject_id?: string | null
           teacher_code?: string | null
           updated_at?: string | null
+          default_class_fee?: number | null
         }
         Update: {
           created_at?: string | null
@@ -606,6 +611,7 @@ export type Database = {
           subject_id?: string | null
           teacher_code?: string | null
           updated_at?: string | null
+          default_class_fee?: number | null
         }
         Relationships: [
           {

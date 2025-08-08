@@ -81,7 +81,7 @@ export default function ClassManagementPage() {
   // Update booking mutation (for class fees)
   const updateBookingMutation = useMutation({
     mutationFn: (data: { id: string; class_fees: number }) =>
-      bookingsApi.update(data.id, { class_fees: data.class_fees }),
+      bookingsApi.setCustomFeeForBooking(data.id, data.class_fees),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
       setIsEditClassFeesOpen(false);
@@ -442,7 +442,7 @@ export default function ClassManagementPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium">رسوم المجموعة</Label>
-                <p className="text-lg">{booking.class_fees || 0} جنيه</p>
+                <p className="text-lg">{booking.class_fees || 0} جنيه {booking.is_custom_fee ? '(مخصص)' : '(افتراضي)'}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">عدد الطلاب</Label>
@@ -730,6 +730,7 @@ export default function ClassManagementPage() {
                   onChange={(e) => setNewClassFees(Number(e.target.value) || 0)}
                   min="0"
                 />
+                <p className="text-xs text-muted-foreground mt-1">سيتم تطبيق الرسوم على جميع طلاب هذه المجموعة وسيتم اعتبارها رسومًا مخصصة لا تتأثر بتغييرات رسوم المعلم الافتراضية.</p>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsEditClassFeesOpen(false)}>

@@ -11,11 +11,14 @@ import { TeacherCodeManager } from "@/components/teacher/TeacherCodeManager";
 import { BulkUploadModal } from "@/components/teacher/BulkUploadModal";
 import { formatShortArabicDate } from "@/utils/dateUtils";
 import { Badge } from "@/components/ui/badge";
-import { getTeachers, deleteTeacher } from "@/api/teachers";
+import { getTeachers, deleteTeacher, updateTeacher, applyTeacherDefaultFee } from "@/api/teachers";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface Teacher {
   id: string;
@@ -28,6 +31,7 @@ interface Teacher {
   teacher_academic_stages?: Array<{
     academic_stages: { name: string };
   }>;
+  default_class_fee?: number | null;
 }
 
 const TeachersPage = () => {
@@ -35,6 +39,8 @@ const TeachersPage = () => {
   const [showEditTeacher, setShowEditTeacher] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [confirmDeleteTeacher, setConfirmDeleteTeacher] = useState<Teacher | null>(null);
+  const [feeModalTeacher, setFeeModalTeacher] = useState<Teacher | null>(null);
+  const [newDefaultFee, setNewDefaultFee] = useState<number>(0);
   const { profile, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -121,6 +127,14 @@ const TeachersPage = () => {
         </Badge>
       ),
     },
+    {
+      key: 'default_fee',
+      header: 'الرسوم الافتراضية',
+      mobileLabel: 'الرسوم',
+      render: (teacher) => (
+        <span>{teacher.default_class_fee ?? 0} جنيه</span>
+      ),
+    },
   ];
 
   // Table actions
@@ -130,6 +144,16 @@ const TeachersPage = () => {
       onClick: (teacher) => {
         setSelectedTeacher(teacher);
         setShowEditTeacher(true);
+      },
+      variant: 'outline',
+      size: 'sm',
+      icon: <Edit className="h-4 w-4" />,
+    },
+    {
+      label: 'تعديل الرسوم',
+      onClick: (teacher) => {
+        setFeeModalTeacher(teacher);
+        setNewDefaultFee(teacher.default_class_fee ?? 0);
       },
       variant: 'outline',
       size: 'sm',
@@ -368,6 +392,40 @@ const TeachersPage = () => {
             />
           </>
         )}
+
+        {/* Default fee modal */}
+        <Dialog open={!!feeModalTeacher} onOpenChange={(open) => { if(!open) setFeeModalTeacher(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>تعديل الرسوم الافتراضية للمعلم</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>الرسوم الافتراضية (تطبق على كل مجموعات المعلم غير المخصصة)</Label>
+                <Input type="number" value={newDefaultFee} min={0} onChange={(e)=> setNewDefaultFee(Number(e.target.value)||0)} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={()=> setFeeModalTeacher(null)}>إلغاء</Button>
+                <Button
+                  onClick={async ()=>{
+                    if(!feeModalTeacher) return;
+                    try{
+                      await applyTeacherDefaultFee(feeModalTeacher.id, newDefaultFee);
+                      setFeeModalTeacher(null);
+                      setNewDefaultFee(0);
+                      toast({ title: 'تم تطبيق الرسوم الافتراضية وتحديث المجموعات والطلاب' });
+                      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+                      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                      queryClient.invalidateQueries({ queryKey: ['registrations'] });
+                    }catch(err:any){
+                      toast({ title: 'فشل تحديث الرسوم', description: err.message, variant: 'destructive' });
+                    }
+                  }}
+                >حفظ</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Delete confirmation */}
         <AlertDialog open={!!confirmDeleteTeacher} onOpenChange={(open) => { if (!open) setConfirmDeleteTeacher(null); }}>

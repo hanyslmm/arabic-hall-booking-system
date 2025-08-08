@@ -40,12 +40,13 @@ export const addTeacher = async (teacherData: TeacherFormData) => {
   return data as Teacher;
 };
 
-export const updateTeacher = async (id: string, updates: Partial<TeacherFormData>) => {
+export const updateTeacher = async (id: string, updates: Partial<TeacherFormData & { default_class_fee: number }>) => {
   const updateData: any = {};
   
   if (updates.name !== undefined) updateData.name = updates.name;
   if (updates.mobile_phone !== undefined) updateData.mobile_phone = updates.mobile_phone;
   if (updates.subject_id !== undefined) updateData.subject_id = updates.subject_id;
+  if ((updates as any).default_class_fee !== undefined) updateData.default_class_fee = (updates as any).default_class_fee;
   
   const { data, error } = await supabase
     .from("teachers")
@@ -56,6 +57,15 @@ export const updateTeacher = async (id: string, updates: Partial<TeacherFormData
   
   if (error) throw error;
   return data as Teacher;
+};
+
+export const applyTeacherDefaultFee = async (teacherId: string, fee: number) => {
+  // Call the RPC function created in migration to propagate the fee
+  const { error } = await supabase.rpc('apply_teacher_default_fee', {
+    p_teacher_id: teacherId,
+    p_fee: fee,
+  });
+  if (error) throw error;
 };
 
 export const deleteTeacher = async (id: string) => {

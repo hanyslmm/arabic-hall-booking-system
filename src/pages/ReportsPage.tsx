@@ -73,33 +73,23 @@ export function ReportsPage() {
   });
 
   // Fetch all bookings with financial data
-  const { data: bookings, isLoading } = useQuery({
-    queryKey: ['financial-report'],
+  const reportsQuery = useQuery({
+    queryKey: ['bookings-report'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select(`
-          id,
-          start_date,
-          class_fees,
-          number_of_students,
-          halls(name),
-          teachers(name),
-          subjects(name),
-          created_at
-        `)
-        .order('created_at', { ascending: false });
-      
+        .select('id, start_date, class_fees, is_custom_fee, number_of_students, halls(name), teachers(name)')
+        .order('start_date', { ascending: false });
       if (error) throw error;
-      return data || [];
+      return data as any[];
     }
   });
 
   // Calculate total revenue
-  const totalRevenue = bookings?.reduce((sum, booking) => sum + (booking.class_fees || 0), 0) || 0;
+  const totalRevenue = reportsQuery.data?.reduce((sum, booking) => sum + (booking.class_fees || 0), 0) || 0;
 
 
-  if (isLoading) {
+  if (reportsQuery.isLoading) {
     return (
       <UnifiedLayout>
         <div className="flex items-center justify-center h-96">
@@ -137,7 +127,7 @@ export function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {bookings?.length || 0}
+                {reportsQuery.data?.length || 0}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 إجمالي الحجوزات
@@ -151,7 +141,7 @@ export function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">
-                {bookings?.length ? Math.round(totalRevenue / bookings.length).toLocaleString() : 0} جنيه
+                {reportsQuery.data?.length ? Math.round(totalRevenue / reportsQuery.data.length).toLocaleString() : 0} جنيه
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 للحجز الواحد
@@ -181,7 +171,7 @@ export function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookings?.map((booking) => (
+                  {reportsQuery.data?.map((booking) => (
                     <TableRow key={booking.id}>
                       <TableCell>
                         {format(new Date(booking.start_date), "dd/MM/yyyy")}
@@ -191,7 +181,7 @@ export function ReportsPage() {
                       <TableCell>-</TableCell>
                       <TableCell>{booking.number_of_students || 0}</TableCell>
                       <TableCell className="font-semibold">
-                        {(booking.class_fees || 0).toLocaleString()} جنيه
+                        {(booking.class_fees || 0).toLocaleString()} جنيه {booking.is_custom_fee ? '(مخصص)' : ''}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -199,7 +189,7 @@ export function ReportsPage() {
               </Table>
             </div>
 
-            {bookings?.length === 0 && (
+            {reportsQuery.data?.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
                 <h3 className="text-lg font-medium mb-2">لا توجد حجوزات</h3>

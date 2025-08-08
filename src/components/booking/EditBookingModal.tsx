@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { bookingsApi } from "@/api/bookings";
 
 const bookingSchema = z.object({
   hall_id: z.string().min(1, "يرجى اختيار القاعة"),
@@ -318,6 +319,33 @@ export const EditBookingModal = ({ bookingId, booking }: EditBookingModalProps) 
             {form.formState.errors.days_of_week && (
               <p className="text-sm text-destructive">{form.formState.errors.days_of_week.message}</p>
             )}
+          </div>
+
+          {/* Custom fee quick action */}
+          <div className="rounded border p-3 space-y-2">
+            <Label>الرسوم</Label>
+            <div className="flex gap-2 items-center">
+              <Input type="number" placeholder="الرسوم" defaultValue={booking.class_fees || 0} onChange={()=>{}} readOnly />
+              <Button type="button" variant="outline" size="sm" onClick={async ()=>{
+                try{
+                  await bookingsApi.setCustomFeeForBooking(bookingId, booking.class_fees || 0);
+                  queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                  toast({ title: 'تم تحديد الرسوم كـمخصصة لهذه المجموعة' });
+                }catch(err:any){
+                  toast({ title: 'فشل الإجراء', description: err.message, variant: 'destructive' });
+                }
+              }}>تحديد كمخصص</Button>
+              <Button type="button" variant="outline" size="sm" onClick={async ()=>{
+                try{
+                  // Set is_custom_fee=false so teacher default applies next time it changes
+                  await bookingsApi.update(bookingId, { is_custom_fee: false });
+                  queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                  toast({ title: 'تم إعادة الرسوم إلى الوضع الافتراضي للمعلم' });
+                }catch(err:any){
+                  toast({ title: 'فشل الإجراء', description: err.message, variant: 'destructive' });
+                }
+              }}>اعتماد الافتراضي</Button>
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">

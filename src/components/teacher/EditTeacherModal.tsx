@@ -18,6 +18,7 @@ const teacherSchema = z.object({
   mobile_phone: z.string().optional(),
   subject_id: z.string().optional(),
   academic_stage_ids: z.array(z.string()).optional(),
+  default_class_fee: z.coerce.number().optional(),
 });
 
 type TeacherFormData = z.infer<typeof teacherSchema>;
@@ -55,6 +56,7 @@ export const EditTeacherModal = ({ isOpen, onClose, teacher }: EditTeacherModalP
       mobile_phone: teacher?.mobile_phone || "",
       subject_id: teacher?.subject_id || "",
       academic_stage_ids: [],
+      default_class_fee: undefined,
     },
   });
 
@@ -100,6 +102,10 @@ export const EditTeacherModal = ({ isOpen, onClose, teacher }: EditTeacherModalP
       // Only include subject_id if it has a value
       if (data.subject_id && data.subject_id !== '') {
         updateData.subject_id = data.subject_id;
+      }
+
+      if (typeof (data as any).default_class_fee === 'number') {
+        updateData.default_class_fee = (data as any).default_class_fee;
       }
       
       const updatedTeacher = await updateTeacher(teacher.id, updateData);
@@ -150,6 +156,7 @@ export const EditTeacherModal = ({ isOpen, onClose, teacher }: EditTeacherModalP
         mobile_phone: teacher.mobile_phone || "",
         subject_id: teacher.subject_id || "",
         academic_stage_ids: [],
+        default_class_fee: (teacher as any).default_class_fee ?? undefined,
       });
       setSelectedStages([]);
     }
@@ -203,6 +210,17 @@ export const EditTeacherModal = ({ isOpen, onClose, teacher }: EditTeacherModalP
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Default class fee */}
+          <div className="space-y-2">
+            <Label htmlFor="default_class_fee">الرسوم الافتراضية للمعلم (اختياري)</Label>
+            <Input
+              id="default_class_fee"
+              type="number"
+              placeholder="0"
+              {...form.register('default_class_fee', { valueAsNumber: true })}
+            />
           </div>
 
           {/* Academic Stages Field */}
