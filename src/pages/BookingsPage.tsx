@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/layout/Navbar";
@@ -84,7 +84,7 @@ const BookingsPage = () => {
   });
 
   // Fetch bookings with actual student count
-  const { data: bookings, isLoading, error } = useQuery({
+  const { data: bookings, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.bookingsFiltered(selectedHall, selectedTeacher),
     queryFn: async () => {
       let query = supabase
@@ -126,6 +126,8 @@ const BookingsPage = () => {
       return bookingsWithCounts as (Booking & { actual_student_count: number })[];
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 2,
+    refetchOnWindowFocus: false,
   });
 
   // Delete booking mutation
@@ -158,6 +160,16 @@ const BookingsPage = () => {
     profile?.user_role === 'owner' || profile?.user_role === 'manager' || isAdmin,
     [profile?.user_role, isAdmin]
   );
+
+  // Loading timeout guard to avoid infinite spinner on flaky connections
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  useEffect(() => {
+    if (isLoading || isFetching) {
+      const timerId = setTimeout(() => setLoadingTimedOut(true), 12000); // 12s timeout
+      return () => clearTimeout(timerId);
+    }
+    setLoadingTimedOut(false);
+  }, [isLoading, isFetching]);
 
   if (error) {
     return (
@@ -494,17 +506,34 @@ const BookingsPage = () => {
           </CardContent>
         </Card>
 
-        <MobileResponsiveTable
-          data={bookings || []}
-          columns={bookingColumns}
-          title="قائمة المجموعات الدراسية"
-          isLoading={isLoading}
-          emptyMessage="لم يتم إنشاء أي مجموعات بعد"
-          emptyIcon={<Users className="h-16 w-16 mx-auto text-muted-foreground" />}
-          getRowKey={(booking) => booking.id}
-          expandedContent={renderExpandedBookingContent}
-          itemsPerPage={50}
-        />
+        {/* Error or stalled loading state */}
+        {(error || loadingTimedOut) ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>تعذر تحميل قائمة المجموعات الدراسية</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className="text-muted-foreground">
+                  {error ? 'حدث خطأ أثناء جلب البيانات. يرجى المحاولة مرة أخرى.' : 'يستغرق التحميل وقتًا أطول من المتوقع. تحقق من الاتصال بالإنترنت ثم أعد المحاولة.'}
+                </p>
+                <Button onClick={() => refetch()} className="w-full sm:w-auto">إعادة المحاولة</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <MobileResponsiveTable
+            data={bookings || []}
+            columns={bookingColumns}
+            title="قائمة المجموعات الدراسية"
+            isLoading={isLoading}
+            emptyMessage="لم يتم إنشاء أي مجموعات بعد"
+            emptyIcon={<Users className="h-16 w-16 mx-auto text-muted-foreground" />}
+            getRowKey={(booking) => booking.id}
+            expandedContent={renderExpandedBookingContent}
+            itemsPerPage={50}
+          />
+        )}
       </main>
     </div>
   );
