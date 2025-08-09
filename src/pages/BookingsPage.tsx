@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Users, Clock, MapPin, Filter, Hash, Edit, Trash2 } from "lucide-react";
 import { formatTimeAmPm, formatShortArabicDate } from "@/utils/dateUtils";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { EditBookingModal } from "@/components/booking/EditBookingModal";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -54,12 +54,17 @@ interface Booking {
 }
 
 const BookingsPage = () => {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [selectedHall, setSelectedHall] = useState<string>('all');
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // If not authenticated, redirect to login to avoid RLS errors
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   // Fetch halls for filter
   const { data: halls } = useQuery({
@@ -70,6 +75,7 @@ const BookingsPage = () => {
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user,
   });
 
   // Fetch teachers for filter  
@@ -81,6 +87,7 @@ const BookingsPage = () => {
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user,
   });
 
   // Fetch bookings with actual student count
@@ -140,6 +147,7 @@ const BookingsPage = () => {
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 2,
     refetchOnWindowFocus: false,
+    enabled: !!user,
   });
 
   // Delete booking mutation
