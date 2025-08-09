@@ -1,31 +1,37 @@
-import { useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { UserProfile, AuthPermissions } from "@/types";
 import { usePermissions } from "./usePermissions";
 
-export const useAuth = () => {
+interface AuthContextValue extends AuthPermissions {
+  user: User | null;
+  profile: UserProfile | null;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Safety timeout to prevent infinite loading in edge cases
     const safetyTimeout = window.setTimeout(() => {
       console.warn("Auth loading exceeded expected time. Proceeding without full profile.");
       setLoading(false);
     }, 8000);
 
-    // Get initial session
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error getting session:', error);
+          console.error("Error getting session:", error);
           setLoading(false);
           return;
         }
-        
+
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchProfile(session.user.id);
@@ -33,26 +39,23 @@ export const useAuth = () => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error("Error initializing auth:", error);
         setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth state changed:", _event, session?.user?.id);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
       }
-    );
+    });
 
     return () => {
       window.clearTimeout(safetyTimeout);
@@ -63,20 +66,20 @@ export const useAuth = () => {
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to handle missing profiles
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error("Error fetching profile:", error);
         setProfile(null);
         return;
       }
-      
+
       setProfile(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error("Error fetching profile:", error);
       setProfile(null);
     } finally {
       setLoading(false);
@@ -85,10 +88,18 @@ export const useAuth = () => {
 
   const permissions = usePermissions(profile);
 
-  return {
-    user,
-    profile,
-    loading,
-    ...permissions
-  };
+  const value: AuthContextValue = useMemo(
+    () => ({ user, profile, loading, ...permissions }),
+    [user, profile, loading, permissions]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return ctx;
 };
