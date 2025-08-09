@@ -329,14 +329,10 @@ export default function ClassManagementPage() {
   };
 
   const applyClassFeeToAll = async () => {
-    if (!booking || !registrations) return;
+    if (!booking) return;
     setIsApplyingAll(true);
     try {
-      const targetFee = booking.class_fees || 0;
-      // Update every registration to class fee; special cases can still be edited later individually
-      for (const reg of registrations) {
-        await studentRegistrationsApi.updateFeesWithStatus(reg.id, targetFee);
-      }
+      await bookingsApi.applyBookingFeeToRegistrations(booking.id);
       queryClient.invalidateQueries({ queryKey: ['registrations', bookingId] });
       toast({ title: 'تم تطبيق رسوم المجموعة على جميع الطلاب' });
     } catch (e) {
