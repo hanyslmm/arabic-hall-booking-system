@@ -300,7 +300,38 @@ export const studentRegistrationsApi = {
     
     if (error) throw error;
     return data as StudentRegistration[];
-  }
+  },
+
+  async updateFeesWithStatus(registrationId: string, newFees: number): Promise<StudentRegistration> {
+    // Fetch current paid_amount to compute payment_status
+    const { data: current, error: fetchError } = await supabase
+      .from("student_registrations")
+      .select("id, paid_amount")
+      .eq("id", registrationId)
+      .single();
+    if (fetchError) throw fetchError;
+
+    const paidAmount = current?.paid_amount || 0;
+    const newStatus = paidAmount === 0 ? 'pending' : (paidAmount >= newFees ? 'paid' : 'partial');
+
+    const { data, error } = await supabase
+      .from("student_registrations")
+      .update({ total_fees: newFees, payment_status: newStatus })
+      .eq("id", registrationId)
+      .select(`
+        *,
+        student:students(*),
+        booking:bookings(
+          *,
+          halls(name),
+          teachers(name),
+          academic_stages(name)
+        )
+      `)
+      .single();
+    if (error) throw error;
+    return data as StudentRegistration;
+  },
 };
 
 // Attendance API

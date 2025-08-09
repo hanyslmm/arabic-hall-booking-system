@@ -401,8 +401,9 @@ const TeachersPage = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>الرسوم الافتراضية (تطبق على كل مجموعات المعلم غير المخصصة)</Label>
+                <Label>الرسوم الافتراضية (تطبق تلقائياً على كل مجموعات هذا المعلم التي ليست "مخصصة")</Label>
                 <Input type="number" value={newDefaultFee} min={0} onChange={(e)=> setNewDefaultFee(Number(e.target.value)||0)} />
+                <p className="text-xs text-muted-foreground mt-1">يمكنك تخصيص رسوم مجموعة معينة من صفحة إدارة المجموعة. التعديلات هنا لا تؤثر على المجموعات ذات الرسوم المخصصة.</p>
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={()=> setFeeModalTeacher(null)}>إلغاء</Button>

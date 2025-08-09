@@ -57,6 +57,8 @@ export default function ClassManagementPage() {
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [newClassFees, setNewClassFees] = useState<number>(0);
+  const [editingFees, setEditingFees] = useState<Record<string, number>>({});
+  const [isApplyingAll, setIsApplyingAll] = useState(false);
 
   // Fetch booking details
   const { data: booking, isLoading: isLoadingBooking } = useQuery({
@@ -258,6 +260,20 @@ export default function ClassManagementPage() {
     },
   });
 
+  // Per-student fee update
+  const updateStudentFeeMutation = useMutation({
+    mutationFn: async ({ id, fees }: { id: string; fees: number }) =>
+      studentRegistrationsApi.updateFeesWithStatus(id, fees),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['registrations', bookingId] });
+      setEditingFees({});
+      toast({ title: 'تم تحديث رسوم الطالب' });
+    },
+    onError: () => {
+      toast({ title: 'خطأ في تحديث رسوم الطالب', variant: 'destructive' });
+    },
+  });
+
   const handleAttendanceChange = (registrationId: string, isPresent: boolean) => {
     if (isPresent) {
       setAttendanceData(prev => ({
@@ -324,6 +340,24 @@ export default function ClassManagementPage() {
   const handleBulkRemove = () => {
     if (selectedStudents.size === 0) return;
     bulkRemoveStudentsMutation.mutate(Array.from(selectedStudents));
+  };
+
+  const applyClassFeeToAll = async () => {
+    if (!booking || !registrations) return;
+    setIsApplyingAll(true);
+    try {
+      const targetFee = booking.class_fees || 0;
+      // Update every registration to class fee; special cases can still be edited later individually
+      for (const reg of registrations) {
+        await studentRegistrationsApi.updateFeesWithStatus(reg.id, targetFee);
+      }
+      queryClient.invalidateQueries({ queryKey: ['registrations', bookingId] });
+      toast({ title: 'تم تطبيق رسوم المجموعة على جميع الطلاب' });
+    } catch (e) {
+      toast({ title: 'فشل تطبيق الرسوم على الجميع', variant: 'destructive' });
+    } finally {
+      setIsApplyingAll(false);
+    }
   };
 
   const handleUpdateClassFees = () => {
@@ -486,6 +520,10 @@ export default function ClassManagementPage() {
                 <FileText className="h-4 w-4 ml-2" />
                 تقرير الحضور
               </Button>
+              <Button onClick={applyClassFeeToAll} variant="outline" disabled={isApplyingAll}>
+                <DollarSign className="h-4 w-4 ml-2" />
+                {isApplyingAll ? 'جارٍ التطبيق...' : 'تطبيق رسوم المجموعة على الجميع'}
+              </Button>
               
               <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
                 <DialogTrigger asChild>
@@ -645,7 +683,21 @@ export default function ClassManagementPage() {
                           <td className="p-3">{registration.student?.name}</td>
                           <td className="p-3">{registration.student?.serial_number}</td>
                           <td className="p-3">{registration.student?.mobile_phone}</td>
-                          <td className="p-3">{registration.total_fees} جنيه</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                className="w-28"
+                                type="number"
+                                value={editingFees[registration.id] ?? registration.total_fees}
+                                onChange={(e)=> setEditingFees(prev=> ({...prev, [registration.id]: Number(e.target.value) || 0}))}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateStudentFeeMutation.mutate({ id: registration.id, fees: editingFees[registration.id] ?? registration.total_fees })}
+                              >حفظ</Button>
+                            </div>
+                          </td>
                           <td className="p-3">{registration.paid_amount} جنيه</td>
                           <td className="p-3">
                             <Badge 
