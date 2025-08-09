@@ -119,8 +119,8 @@ export const Navbar = ({
 
   return (
     <>
-      {/* Fixed Burger Menu Button - Always visible in top-right */}
-      <div className="fixed top-4 right-4 z-30 lg:right-6">
+      {/* Fixed Burger Menu Button - visible only on small screens */}
+      <div className="fixed top-4 right-4 z-30 lg:right-6 lg:hidden">
         <Button
           variant="default"
           size="sm"
@@ -271,7 +271,7 @@ export const Navbar = ({
           <div className="flex items-center space-x-4 space-x-reverse">
             <h1 className="text-lg sm:text-xl font-bold text-primary">Science Club</h1>
           </div>
-          <div className="w-16"></div> {/* Spacer for fixed burger menu */}
+          <div className="w-16 lg:w-0"></div> {/* Spacer for fixed burger menu on mobile */}
         </div>
       </nav>
     </>
