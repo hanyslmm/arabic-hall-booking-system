@@ -4,9 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate, useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,7 +74,7 @@ export default function LoginPage() {
         title: "تم تسجيل الدخول",
         description: "مرحبًا بك!"
       });
-      window.location.href = "/";
+      navigate("/", { replace: true });
 
     } catch (error: any) {
       toast({
@@ -82,6 +86,11 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // If already authenticated, redirect away from login
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 to-gray-100 dark:from-orange-900 dark:to-gray-900">

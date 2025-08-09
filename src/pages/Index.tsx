@@ -5,6 +5,7 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { HallsGrid } from "@/components/dashboard/HallsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -62,8 +63,8 @@ const Index = () => {
   }
 
   if (!user) {
-    console.log('No user, showing LoginPage');
-    return <LoginPage />;
+    console.log('No user, redirecting to /login');
+    return <Navigate to="/login" replace />;
   }
 
   console.log('User authenticated, showing dashboard');
