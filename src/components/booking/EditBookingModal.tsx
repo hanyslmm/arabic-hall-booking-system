@@ -45,6 +45,7 @@ interface EditBookingModalProps {
 export const EditBookingModal = ({ bookingId, booking }: EditBookingModalProps) => {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [customFee, setCustomFee] = useState<number>(booking.class_fees || 0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -65,6 +66,7 @@ export const EditBookingModal = ({ bookingId, booking }: EditBookingModalProps) 
   useEffect(() => {
     if (booking) {
       setSelectedDays(booking.days_of_week || []);
+      setCustomFee(booking.class_fees || 0);
       form.reset({
         hall_id: booking.hall_id,
         teacher_id: booking.teacher_id,
@@ -325,10 +327,19 @@ export const EditBookingModal = ({ bookingId, booking }: EditBookingModalProps) 
           <div className="rounded border p-3 space-y-2">
             <Label>الرسوم</Label>
             <div className="flex gap-2 items-center">
-              <Input type="number" placeholder="الرسوم" defaultValue={booking.class_fees || 0} onChange={()=>{}} readOnly />
+              <Input
+                type="number"
+                placeholder="الرسوم"
+                value={Number.isFinite(customFee) ? customFee : 0}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setCustomFee(value === '' ? 0 : Number(value) || 0);
+                }}
+                min={0}
+              />
               <Button type="button" variant="outline" size="sm" onClick={async ()=>{
                 try{
-                  await bookingsApi.setCustomFeeForBooking(bookingId, booking.class_fees || 0);
+                  await bookingsApi.setCustomFeeForBooking(bookingId, customFee || 0);
                   queryClient.invalidateQueries({ queryKey: ['bookings'] });
                   toast({ title: 'تم تحديد الرسوم كـمخصصة لهذه المجموعة' });
                 }catch(err:any){

@@ -27,6 +27,8 @@ interface Booking {
   start_time: string;
   days_of_week: string[];
   number_of_students: number;
+  class_fees?: number | null;
+  is_custom_fee?: boolean;
   halls?: { name: string };
   teachers?: { name: string };
   academic_stages?: { name: string };
@@ -151,10 +153,13 @@ export const RegisterStudentModal = ({ isOpen, onClose }: RegisterStudentModalPr
       return;
     }
 
+    const selectedBookingObj = bookings.find((b) => b.id === selectedBooking);
+    const resolvedFees = totalFees.trim() !== "" ? parseFloat(totalFees) : (selectedBookingObj?.class_fees || 0);
+
     registerMutation.mutate({
       student_id: selectedStudent.id,
       booking_id: selectedBooking,
-      total_fees: totalFees ? parseFloat(totalFees) : undefined,
+      total_fees: resolvedFees,
       notes: notes.trim() || undefined,
     });
   };
@@ -339,7 +344,13 @@ export const RegisterStudentModal = ({ isOpen, onClose }: RegisterStudentModalPr
           {/* Booking Selection */}
           <div className="space-y-2">
             <Label htmlFor="booking">اختيار الدورة *</Label>
-            <Select value={selectedBooking} onValueChange={setSelectedBooking}>
+            <Select value={selectedBooking} onValueChange={(value)=>{
+              setSelectedBooking(value);
+              const b = bookings.find((bk)=> bk.id === value);
+              if (b) {
+                setTotalFees((b.class_fees ?? 0).toString());
+              }
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="اختر دورة للتسجيل بها" />
               </SelectTrigger>
@@ -355,7 +366,10 @@ export const RegisterStudentModal = ({ isOpen, onClose }: RegisterStudentModalPr
                          {booking.start_time ? 
                            formatTimeAmPm(booking.start_time) : ''
                          }
-                      </p>
+                         {typeof booking.class_fees !== 'undefined' && (
+                           <> | الرسوم: {booking.class_fees || 0} LE</>
+                         )}
+                       </p>
                     </div>
                   </SelectItem>
                 ))}
@@ -371,7 +385,7 @@ export const RegisterStudentModal = ({ isOpen, onClose }: RegisterStudentModalPr
               type="number"
               step="0.01"
               min="0"
-              placeholder="0.00"
+              placeholder={selectedBooking ? (bookings.find(b=>b.id===selectedBooking)?.class_fees ?? 0).toString() : "0.00"}
               value={totalFees}
               onChange={(e) => setTotalFees(e.target.value)}
             />
