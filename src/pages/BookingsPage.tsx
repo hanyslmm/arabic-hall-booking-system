@@ -191,19 +191,18 @@ const BookingsPage = () => {
 
       // Batch fetch counts per booking to avoid N+1 queries
       const bookingIds = bookingsData.map((b: any) => b.id);
-      const { data: countsRows, error: countsError } = await supabase
+      const { data: registrationRows, error: registrationsError } = await supabase
         .from('student_registrations')
-        .select('booking_id, count:id')
-        .in('booking_id', bookingIds)
-        .group('booking_id');
+        .select('booking_id')
+        .in('booking_id', bookingIds);
 
       // Build a map of booking_id -> count; fall back to 0 on any error
       const idToCount = new Map<string, number>();
-      if (!countsError && Array.isArray(countsRows)) {
-        countsRows.forEach((row: any) => {
-          const countValue = Number((row as any).count ?? 0);
-          idToCount.set(row.booking_id, isNaN(countValue) ? 0 : countValue);
-        });
+      if (!registrationsError && Array.isArray(registrationRows)) {
+        for (const row of registrationRows as Array<{ booking_id: string }>) {
+          const prev = idToCount.get(row.booking_id) ?? 0;
+          idToCount.set(row.booking_id, prev + 1);
+        }
       }
 
       const enriched = (bookingsData as any[]).map((booking) => ({
