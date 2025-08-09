@@ -124,7 +124,7 @@ const BookingsPage = () => {
       const bookingIds = bookingsData.map((b: any) => b.id);
       const { data: countsRows, error: countsError } = await supabase
         .from('student_registrations')
-        .select('booking_id, count:count(id)')
+        .select('booking_id, count:id')
         .in('booking_id', bookingIds)
         .group('booking_id');
 
