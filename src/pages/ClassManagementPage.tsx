@@ -80,20 +80,6 @@ export default function ClassManagementPage() {
     queryFn: studentsApi.getAll,
   });
 
-  // Update booking mutation (for class fees)
-  const updateBookingMutation = useMutation({
-    mutationFn: (data: { id: string; class_fees: number }) =>
-      bookingsApi.setCustomFeeForBooking(data.id, data.class_fees),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
-      setIsEditClassFeesOpen(false);
-      toast({ title: 'تم تحديث رسوم المجموعة بنجاح' });
-    },
-    onError: () => {
-      toast({ title: 'خطأ في تحديث رسوم المجموعة', variant: 'destructive' });
-    },
-  });
-
   // Add student to class mutation
   const addStudentMutation = useMutation({
     mutationFn: (data: { student_id: string; booking_id: string; total_fees: number }) =>
@@ -360,12 +346,18 @@ export default function ClassManagementPage() {
     }
   };
 
-  const handleUpdateClassFees = () => {
+  const handleUpdateClassFees = async () => {
     if (!booking || newClassFees < 0) return;
-    updateBookingMutation.mutate({
-      id: booking.id,
-      class_fees: newClassFees
-    });
+    try {
+      const updated = await bookingsApi.setCustomFeeForBooking(booking.id, newClassFees);
+      // Explicit RPC already called inside API; invalidate queries afterwards
+      queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
+      queryClient.invalidateQueries({ queryKey: ['registrations', bookingId] });
+      setIsEditClassFeesOpen(false);
+      toast({ title: 'تم تحديث رسوم المجموعة وتطبيقها على جميع الطلاب' });
+    } catch (e) {
+      toast({ title: 'خطأ في تحديث رسوم المجموعة', variant: 'destructive' });
+    }
   };
 
   const saveAttendance = () => {
@@ -788,7 +780,7 @@ export default function ClassManagementPage() {
                 <Button variant="outline" onClick={() => setIsEditClassFeesOpen(false)}>
                   إلغاء
                 </Button>
-                <Button onClick={handleUpdateClassFees} disabled={updateBookingMutation.isPending}>
+                <Button onClick={handleUpdateClassFees}>
                   حفظ التعديل
                 </Button>
               </div>

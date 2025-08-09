@@ -45,7 +45,7 @@ export const updateBooking = async (id: string, updates: Partial<Tables<"booking
 };
 
 export const setCustomFeeForBooking = async (id: string, classFees: number) => {
-  // Mark as custom and update fees; trigger will sync registrations
+  // Mark as custom and update fees; trigger will sync registrations, and we also call RPC explicitly
   const { data, error } = await supabase
     .from('bookings')
     .update({ class_fees: classFees, is_custom_fee: true })
@@ -53,6 +53,11 @@ export const setCustomFeeForBooking = async (id: string, classFees: number) => {
     .select()
     .single();
   if (error) throw error;
+
+  // Explicitly apply the booking fee to all registrations for reliability
+  const { error: rpcError } = await supabase.rpc('apply_booking_fee', { p_booking_id: id });
+  if (rpcError) throw rpcError;
+
   return data as Booking;
 };
 
