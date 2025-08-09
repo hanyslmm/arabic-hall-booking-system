@@ -24,6 +24,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { AuditLogPage } from "./pages/AuditLogPage";
 import { StyleShowcase } from "./components/StyleShowcase";
+import DiagnosticsPage from "./pages/DiagnosticsPage";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/audit-logs" element={<AuditLogPage />} />
+            <Route path="/diagnostics" element={<DiagnosticsPage />} />
             <Route path="/style-showcase" element={<StyleShowcase />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

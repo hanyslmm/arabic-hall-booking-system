@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Clock, MapPin, Filter, Hash, Edit, Trash2 } from "lucide-react";
+import { Calendar, Users, Clock, MapPin, Filter, Hash, Edit, Trash2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 import { formatTimeAmPm, formatShortArabicDate } from "@/utils/dateUtils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -28,6 +28,7 @@ import {
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
 import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Booking {
   id: string;
@@ -58,8 +59,53 @@ const BookingsPage = () => {
   const navigate = useNavigate();
   const [selectedHall, setSelectedHall] = useState<string>('all');
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
+  const [debugInfo, setDebugInfo] = useState<{
+    authState: any;
+    profileState: any;
+    connectionState: string;
+  } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Debug authentication and connection state
+  useEffect(() => {
+    const checkConnectionAndAuth = async () => {
+      try {
+        // Test Supabase connection
+        const { data: connectionTest, error: connectionError } = await supabase
+          .from('profiles')
+          .select('count')
+          .limit(1);
+        
+        // Get current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        setDebugInfo({
+          authState: {
+            user: user ? { id: user.id, email: user.email } : null,
+            session: session ? { user_id: session.user?.id } : null,
+            sessionError: sessionError?.message,
+          },
+          profileState: {
+            profile: profile ? { 
+              id: profile.id, 
+              user_role: profile.user_role,
+              full_name: profile.full_name 
+            } : null,
+          },
+          connectionState: connectionError ? `Connection Error: ${connectionError.message}` : 'Connected'
+        });
+      } catch (error) {
+        setDebugInfo({
+          authState: { error: 'Failed to check auth state' },
+          profileState: { error: 'Failed to check profile state' },
+          connectionState: `Connection Failed: ${error}`
+        });
+      }
+    };
+
+    checkConnectionAndAuth();
+  }, [user, profile]);
 
   // If not authenticated, redirect to login to avoid RLS errors
   if (!user) {
@@ -94,6 +140,22 @@ const BookingsPage = () => {
   const { data: bookings, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.bookingsFiltered(selectedHall, selectedTeacher),
     queryFn: async () => {
+      console.log('🔍 Starting bookings query...');
+      
+      // First, verify authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError);
+        throw new Error(`Session error: ${sessionError.message}`);
+      }
+      
+      if (!session?.user) {
+        console.error('❌ No authenticated user found');
+        throw new Error('لم يتم العثور على مستخدم مصادق عليه. يرجى تسجيل الدخول مرة أخرى.');
+      }
+      
+      console.log('✅ User authenticated:', session.user.id);
+      
       let query = supabase
         .from('bookings')
         .select(`
@@ -111,9 +173,16 @@ const BookingsPage = () => {
         query = query.eq('teacher_id', selectedTeacher);
       }
       
+      console.log('🔍 Executing bookings query with filters:', { selectedHall, selectedTeacher });
+      
       const { data: bookingsData, error } = await query.order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Bookings query error:', error);
+        throw new Error(`خطأ في تحميل الحجوزات: ${error.message} (كود: ${error.code})`);
+      }
+      
+      console.log('✅ Bookings data loaded:', bookingsData?.length || 0, 'records');
 
       // If no bookings, return early
       if (!bookingsData || bookingsData.length === 0) {
@@ -199,11 +268,74 @@ const BookingsPage = () => {
           userName={profile?.full_name || profile?.email || undefined}
           isAdmin={isAdmin}
         />
-        <div className="container mx-auto py-8">
+        <div className="container mx-auto py-8 space-y-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-destructive mb-4">خطأ في تحميل البيانات</h1>
-            <p className="text-muted-foreground">يرجى المحاولة مرة أخرى</p>
+            <p className="text-muted-foreground mb-6">يرجى المحاولة مرة أخرى</p>
           </div>
+          
+          {/* Debug Information */}
+          {debugInfo && (
+            <Card className="max-w-4xl mx-auto">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  معلومات التشخيص
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">حالة الاتصال</h4>
+                    <div className="flex items-center gap-2">
+                      {debugInfo.connectionState.includes('Error') || debugInfo.connectionState.includes('Failed') ? 
+                        <WifiOff className="h-4 w-4 text-destructive" /> : 
+                        <Wifi className="h-4 w-4 text-green-600" />
+                      }
+                      <span className="text-xs">{debugInfo.connectionState}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">حالة المصادقة</h4>
+                    <div className="text-xs space-y-1">
+                      <div>المستخدم: {debugInfo.authState.user ? '✅ متصل' : '❌ غير متصل'}</div>
+                      <div>الجلسة: {debugInfo.authState.session ? '✅ نشطة' : '❌ غير نشطة'}</div>
+                      {debugInfo.authState.sessionError && (
+                        <div className="text-destructive">خطأ الجلسة: {debugInfo.authState.sessionError}</div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">معلومات الملف الشخصي</h4>
+                    <div className="text-xs space-y-1">
+                      <div>الملف الشخصي: {debugInfo.profileState.profile ? '✅ محمل' : '❌ غير محمل'}</div>
+                      {debugInfo.profileState.profile && (
+                        <div>الصلاحية: {debugInfo.profileState.profile.user_role || 'غير محددة'}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>خطأ تفصيلي:</strong> {error?.message || 'خطأ غير معروف'}
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="flex gap-2 justify-center">
+                  <Button onClick={() => refetch()} variant="outline">
+                    إعادة تحميل البيانات
+                  </Button>
+                  <Button onClick={() => navigate('/login')} variant="outline">
+                    تسجيل الدخول مرة أخرى
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     );
