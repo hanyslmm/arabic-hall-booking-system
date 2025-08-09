@@ -45,40 +45,51 @@ export const updateBooking = async (id: string, updates: Partial<Tables<"booking
 };
 
 export const setCustomFeeForBooking = async (id: string, classFees: number) => {
-  // Mark as custom and update fees; trigger will sync registrations, and we also call RPC explicitly
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ class_fees: classFees, is_custom_fee: true })
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-
-  // Try to apply via RPC first
+  // Prefer atomic RPC that updates booking and registrations together
   try {
-    const { error: rpcError } = await supabase.rpc('apply_booking_fee', { p_booking_id: id });
+    const { error: rpcError } = await supabase.rpc('set_booking_custom_fee', { p_booking_id: id, p_fee: classFees });
     if (rpcError) throw rpcError;
   } catch (_) {
-    // Fallback: manually propagate to registrations
-    const { data: regs, error: regsError } = await supabase
-      .from('student_registrations')
-      .select('id, paid_amount')
-      .eq('booking_id', id);
-    if (regsError) throw regsError;
+    // Fallback to previous behavior: update booking then propagate
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ class_fees: classFees, is_custom_fee: true })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
 
-    const registrations = (regs as Array<{ id: string; paid_amount: number | null }>) || [];
-    for (const reg of registrations) {
-      const paidAmount = Number(reg.paid_amount || 0);
-      const newStatus = paidAmount === 0 ? 'pending' : (paidAmount >= classFees ? 'paid' : 'partial');
-      const { error: updErr } = await supabase
+    try {
+      const { error: rpcError2 } = await supabase.rpc('apply_booking_fee', { p_booking_id: id });
+      if (rpcError2) throw rpcError2;
+    } catch (_) {
+      const { data: regs, error: regsError } = await supabase
         .from('student_registrations')
-        .update({ total_fees: classFees, payment_status: newStatus })
-        .eq('id', reg.id);
-      if (updErr) throw updErr;
+        .select('id, paid_amount')
+        .eq('booking_id', id);
+      if (regsError) throw regsError;
+
+      const registrations = (regs as Array<{ id: string; paid_amount: number | null }>) || [];
+      for (const reg of registrations) {
+        const paidAmount = Number(reg.paid_amount || 0);
+        const newStatus = paidAmount === 0 ? 'pending' : (paidAmount >= classFees ? 'paid' : 'partial');
+        const { error: updErr } = await supabase
+          .from('student_registrations')
+          .update({ total_fees: classFees, payment_status: newStatus })
+          .eq('id', reg.id);
+        if (updErr) throw updErr;
+      }
     }
   }
 
-  return data as Booking;
+  // Fetch and return updated booking snapshot
+  const { data: updatedBooking, error: fetchErr } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (fetchErr) throw fetchErr;
+  return updatedBooking as Booking;
 };
 
 export const applyBookingFeeToRegistrations = async (id: string) => {
