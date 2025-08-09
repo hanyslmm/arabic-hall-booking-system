@@ -108,22 +108,34 @@ const BookingsPage = () => {
       
       if (error) throw error;
 
-      // Get actual registered student counts for each booking
-      const bookingsWithCounts = await Promise.all(
-        bookingsData.map(async (booking) => {
-          const { count } = await supabase
-            .from('student_registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('booking_id', booking.id);
-          
-          return {
-            ...booking,
-            actual_student_count: count || 0
-          };
-        })
-      );
+      // If no bookings, return early
+      if (!bookingsData || bookingsData.length === 0) {
+        return [] as (Booking & { actual_student_count: number })[];
+      }
+
+      // Batch fetch counts per booking to avoid N+1 queries
+      const bookingIds = bookingsData.map((b: any) => b.id);
+      const { data: countsRows, error: countsError } = await supabase
+        .from('student_registrations')
+        .select('booking_id, count:id')
+        .in('booking_id', bookingIds)
+        .group('booking_id');
+
+      // Build a map of booking_id -> count; fall back to 0 on any error
+      const idToCount = new Map<string, number>();
+      if (!countsError && Array.isArray(countsRows)) {
+        countsRows.forEach((row: any) => {
+          const countValue = Number((row as any).count ?? 0);
+          idToCount.set(row.booking_id, isNaN(countValue) ? 0 : countValue);
+        });
+      }
+
+      const enriched = (bookingsData as any[]).map((booking) => ({
+        ...booking,
+        actual_student_count: idToCount.get(booking.id) ?? 0,
+      }));
       
-      return bookingsWithCounts as (Booking & { actual_student_count: number })[];
+      return enriched as (Booking & { actual_student_count: number })[];
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 2,
@@ -165,7 +177,7 @@ const BookingsPage = () => {
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   useEffect(() => {
     if (isLoading || isFetching) {
-      const timerId = setTimeout(() => setLoadingTimedOut(true), 12000); // 12s timeout
+      const timerId = setTimeout(() => setLoadingTimedOut(true), 25000); // 25s timeout (less aggressive)
       return () => clearTimeout(timerId);
     }
     setLoadingTimedOut(false);
