@@ -14,9 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/layout/Navbar';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { ArrowLeft, Plus, Save, DollarSign, Users, Calendar, Upload, Trash2, FileText, Edit, Filter } from 'lucide-react';
+import { ArrowLeft, Plus, Save, DollarSign, Users, Calendar, Upload, Trash2, Edit, Filter } from 'lucide-react';
 import { bookingsApi } from '@/api/bookings';
-import { studentRegistrationsApi, attendanceApi, paymentsApi } from '@/api/students';
+import { studentRegistrationsApi, paymentsApi } from '@/api/students';
 import { studentsApi } from '@/api/students';
 import { BulkUploadModal } from '@/components/student/BulkUploadModal';
 import { format } from 'date-fns';
@@ -43,22 +43,18 @@ export default function ClassManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceRecord>>({});
-  const [paymentData, setPaymentData] = useState<Record<string, PaymentRecord>>({});
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isEditClassFeesOpen, setIsEditClassFeesOpen] = useState(false);
-  const [isAttendanceReportOpen, setIsAttendanceReportOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [customFees, setCustomFees] = useState<Record<string, number>>({});
-  const [paymentMonth, setPaymentMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
-  const [attendanceDate, setAttendanceDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [newClassFees, setNewClassFees] = useState<number>(0);
   const [editingFees, setEditingFees] = useState<Record<string, number>>({});
   const [isApplyingAll, setIsApplyingAll] = useState(false);
+  const [viewingStudentDetails, setViewingStudentDetails] = useState<any | null>(null);
 
   // Fetch booking details
   const { data: booking, isLoading: isLoadingBooking } = useQuery({
@@ -124,31 +120,6 @@ export default function ClassManagementPage() {
     },
   });
 
-  // Save attendance mutation
-  const saveAttendanceMutation = useMutation({
-    mutationFn: attendanceApi.bulkCreate,
-    onSuccess: () => {
-      toast({ title: 'تم حفظ الحضور بنجاح' });
-      setAttendanceData({});
-    },
-    onError: () => {
-      toast({ title: 'خطأ في حفظ الحضور', variant: 'destructive' });
-    },
-  });
-
-  // Save payment mutation
-  const savePaymentMutation = useMutation({
-    mutationFn: paymentsApi.bulkCreate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['registrations', bookingId] });
-      toast({ title: 'تم حفظ المدفوعات بنجاح' });
-      setPaymentData({});
-    },
-    onError: () => {
-      toast({ title: 'خطأ في حفظ المدفوعات', variant: 'destructive' });
-    },
-  });
-
   // Enhanced bulk student upload mutation
   const bulkStudentMutation = useMutation({
     mutationFn: async (students: any[]) => {
@@ -176,7 +147,7 @@ export default function ClassManagementPage() {
                 amount: studentData.payment,
                 payment_date: new Date().toISOString().split('T')[0],
                 payment_method: 'cash',
-                notes: `دفعة شهر ${paymentMonth}`,
+                notes: `دفعة شهر ${format(new Date(), 'yyyy-MM')}`,
               });
             }
 
@@ -218,7 +189,7 @@ export default function ClassManagementPage() {
                 amount: studentData.payment,
                 payment_date: new Date().toISOString().split('T')[0],
                 payment_method: 'cash',
-                notes: `دفعة شهر ${paymentMonth}`,
+                notes: `دفعة شهر ${format(new Date(), 'yyyy-MM')}`,
               });
             }
 
@@ -259,39 +230,6 @@ export default function ClassManagementPage() {
       toast({ title: 'خطأ في تحديث رسوم الطالب', variant: 'destructive' });
     },
   });
-
-  const handleAttendanceChange = (registrationId: string, isPresent: boolean) => {
-    if (isPresent) {
-      setAttendanceData(prev => ({
-        ...prev,
-        [registrationId]: {
-          student_registration_id: registrationId,
-          attendance_date: `${attendanceDate} ${format(new Date(), 'HH:mm:ss')}`,
-          status: 'present',
-        }
-      }));
-    } else {
-      // Remove from attendance data if unchecked (will be considered absent)
-      setAttendanceData(prev => {
-        const newData = { ...prev };
-        delete newData[registrationId];
-        return newData;
-      });
-    }
-  };
-
-  const handlePaymentChange = (registrationId: string, amount: number) => {
-    setPaymentData(prev => ({
-      ...prev,
-      [registrationId]: {
-        student_registration_id: registrationId,
-        amount,
-        payment_date: format(new Date(), 'yyyy-MM-dd'),
-        payment_method: 'cash',
-        notes: `دفعة شهر ${paymentMonth}`,
-      }
-    }));
-  };
 
   const handleAddStudent = () => {
     if (!selectedStudentId || !booking) return;
@@ -354,24 +292,6 @@ export default function ClassManagementPage() {
     } catch (e) {
       toast({ title: 'خطأ في تحديث رسوم المجموعة', variant: 'destructive' });
     }
-  };
-
-  const saveAttendance = () => {
-    const records = Object.values(attendanceData);
-    if (records.length === 0) {
-      toast({ title: 'لا توجد بيانات حضور للحفظ', variant: 'destructive' });
-      return;
-    }
-    saveAttendanceMutation.mutate(records);
-  };
-
-  const savePayments = () => {
-    const records = Object.values(paymentData);
-    if (records.length === 0) {
-      toast({ title: 'لا توجد مدفوعات للحفظ', variant: 'destructive' });
-      return;
-    }
-    savePaymentMutation.mutate(records);
   };
 
   // Filter registrations based on search and status
@@ -504,10 +424,6 @@ export default function ClassManagementPage() {
               إدارة الطلاب
             </CardTitle>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <Button onClick={() => setIsAttendanceReportOpen(true)} variant="outline">
-                <FileText className="h-4 w-4 ml-2" />
-                تقرير الحضور
-              </Button>
               <Button onClick={applyClassFeeToAll} variant="outline" disabled={isApplyingAll}>
                 <DollarSign className="h-4 w-4 ml-2" />
                 {isApplyingAll ? 'جارٍ التطبيق...' : 'تطبيق رسوم المجموعة على الجميع'}
@@ -608,35 +524,6 @@ export default function ClassManagementPage() {
                   )}
                 </div>
 
-                {/* Attendance Header */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">تسجيل الحضور</h3>
-                   <div className="flex items-center gap-4">
-                     <div className="flex items-center gap-2">
-                       <Label className="text-sm">شهر الدفع:</Label>
-                       <Input
-                         type="month"
-                         value={paymentMonth}
-                         onChange={(e) => setPaymentMonth(e.target.value)}
-                         className="w-40"
-                       />
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <Label className="text-sm">تاريخ الحضور:</Label>
-                       <Input
-                         type="date"
-                         value={attendanceDate}
-                         onChange={(e) => setAttendanceDate(e.target.value)}
-                         className="w-40"
-                       />
-                     </div>
-                    <Button onClick={saveAttendance} disabled={Object.keys(attendanceData).length === 0}>
-                      <Save className="h-4 w-4 ml-2" />
-                      حفظ الحضور
-                    </Button>
-                  </div>
-                </div>
-
                 {/* Students Table */}
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
@@ -654,8 +541,6 @@ export default function ClassManagementPage() {
                         <th className="text-right p-3">الرسوم</th>
                         <th className="text-right p-3">المدفوع</th>
                         <th className="text-right p-3">حالة الدفع</th>
-                        <th className="text-center p-3">الحضور اليوم</th>
-                        <th className="text-center p-3">دفع اليوم</th>
                         <th className="text-center p-3">إجراءات</th>
                       </tr>
                     </thead>
@@ -668,7 +553,12 @@ export default function ClassManagementPage() {
                               onCheckedChange={(checked) => handleStudentSelection(registration.id, checked as boolean)}
                             />
                           </td>
-                          <td className="p-3">{registration.student?.name}</td>
+                          <td 
+                            className="p-3 font-medium cursor-pointer hover:text-primary"
+                            onClick={() => setViewingStudentDetails(registration)}
+                          >
+                            {registration.student?.name}
+                          </td>
                           <td className="p-3">{registration.student?.serial_number}</td>
                           <td className="p-3">{registration.student?.mobile_phone}</td>
                           <td className="p-3">
@@ -699,28 +589,6 @@ export default function ClassManagementPage() {
                             </Badge>
                           </td>
                           <td className="p-3 text-center">
-                            <div className="flex items-center justify-center">
-                              <label className="flex items-center gap-1 text-sm">
-                                <Checkbox
-                                  checked={!!attendanceData[registration.id]}
-                                  onCheckedChange={(checked) => {
-                                    handleAttendanceChange(registration.id, checked as boolean);
-                                  }}
-                                />
-                                حاضر
-                              </label>
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            <Input
-                              type="number"
-                              placeholder="المبلغ"
-                              className="w-20 mx-auto"
-                              value={paymentData[registration.id]?.amount || ''}
-                              onChange={(e) => handlePaymentChange(registration.id, Number(e.target.value) || 0)}
-                            />
-                          </td>
-                          <td className="p-3 text-center">
                             <Button
                               variant="destructive"
                               size="sm"
@@ -733,18 +601,6 @@ export default function ClassManagementPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
-
-                {/* Payment Actions */}
-                <div className="flex justify-end">
-                  <Button 
-                    onClick={savePayments} 
-                    disabled={Object.keys(paymentData).length === 0}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Save className="h-4 w-4 ml-2" />
-                    حفظ المدفوعات
-                  </Button>
                 </div>
               </div>
             ) : (
@@ -784,18 +640,32 @@ export default function ClassManagementPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Attendance Report Modal */}
-        <Dialog open={isAttendanceReportOpen} onOpenChange={setIsAttendanceReportOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>تقرير الحضور</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">هذه الميزة قيد التطوير...</p>
-              {/* TODO: Implement attendance report */}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Student Details Modal */}
+        {viewingStudentDetails && (
+          <Dialog open={!!viewingStudentDetails} onOpenChange={() => setViewingStudentDetails(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>تفاصيل الطالب: {viewingStudentDetails.student?.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <p><strong>الرقم التسلسلي:</strong> {viewingStudentDetails.student?.serial_number}</p>
+                  <p><strong>رقم الهاتف:</strong> {viewingStudentDetails.student?.mobile_phone}</p>
+                  <p><strong>رسوم المجموعة:</strong> {viewingStudentDetails.total_fees} جنيه</p>
+                  <p><strong>إجمالي المدفوع:</strong> {viewingStudentDetails.paid_amount} جنيه</p>
+                  <p><strong>الحالة:</strong> <Badge variant={viewingStudentDetails.payment_status === 'paid' ? 'default' : 'destructive'}>{viewingStudentDetails.payment_status}</Badge></p>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="font-semibold mb-2">سجل الحضور الشهري</h4>
+                  <div className="p-4 border rounded-md text-center text-muted-foreground">
+                    (سيتم إضافة عرض الحضور الشهري هنا)
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Bulk Upload Modal */}
         <BulkUploadModal
