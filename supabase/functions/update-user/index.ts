@@ -55,8 +55,8 @@ serve(async (req) => {
       );
     }
 
-// Parse request body
-const { userId, password, user_role, full_name, email, phone, teacher_id } = await req.json();
+    // Parse request body
+    const { userId, password, user_role, full_name, email, phone, teacher_id } = await req.json();
 
     if (!userId) {
       return new Response(
@@ -65,16 +65,33 @@ const { userId, password, user_role, full_name, email, phone, teacher_id } = awa
       );
     }
 
-// Validate user_role if provided
-if (user_role) {
-  const validRoles = ['owner', 'manager', 'space_manager', 'read_only', 'teacher'];
-  if (!validRoles.includes(user_role)) {
-    return new Response(
-      JSON.stringify({ error: 'Invalid user_role. Must be one of: owner, manager, space_manager, read_only, teacher' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
+    // Validate user_role if provided
+    if (user_role) {
+      const validRoles = ['owner', 'manager', 'space_manager', 'read_only', 'teacher'];
+      if (!validRoles.includes(user_role)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid user_role. Must be one of: owner, manager, space_manager, read_only, teacher' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Guard: fetch target profile to protect system admin from demotion
+    const { data: targetProfile, error: targetFetchError } = await supabaseClient
+      .from('profiles')
+      .select('id, email, role, user_role')
+      .eq('id', userId)
+      .single();
+
+    if (targetFetchError || !targetProfile) {
+      return new Response(
+        JSON.stringify({ error: 'Target user not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const SYSTEM_ADMIN_ID = '00000000-0000-0000-0000-000000000001';
+    const isSystemAdmin = targetProfile.id === SYSTEM_ADMIN_ID || (targetProfile.role as unknown as string) === 'ADMIN';
 
     // Update user using admin client (for password and email changes)
     const updateData: any = {};
@@ -104,11 +121,35 @@ if (user_role) {
 
     // Update the user's profile with all provided fields
     const profileUpdateData: any = {};
-if (user_role !== undefined) profileUpdateData.user_role = user_role;
-if (full_name !== undefined) profileUpdateData.full_name = full_name;
-if (email !== undefined) profileUpdateData.email = email;
-if (phone !== undefined) profileUpdateData.phone = phone;
-if (teacher_id !== undefined) profileUpdateData.teacher_id = (user_role === 'teacher') ? teacher_id : null;
+
+    // Role change guard: prevent demoting system admin to non-admin roles
+    if (user_role !== undefined) {
+      if (isSystemAdmin) {
+        // Keep system admin as owner regardless of requested role
+        profileUpdateData.user_role = 'owner';
+      } else {
+        // Prevent changing current owners/managers to teacher/read_only/space_manager unless explicitly allowed
+        const isCurrentlyAdmin = targetProfile.user_role === 'owner' || targetProfile.user_role === 'manager';
+        const isRequestedNonAdmin = user_role === 'teacher' || user_role === 'read_only' || user_role === 'space_manager';
+        if (isCurrentlyAdmin && isRequestedNonAdmin) {
+          return new Response(
+            JSON.stringify({ error: 'Cannot demote admin users to non-admin roles' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        profileUpdateData.user_role = user_role;
+      }
+    }
+
+    if (full_name !== undefined) profileUpdateData.full_name = full_name;
+    if (email !== undefined) profileUpdateData.email = email;
+    if (phone !== undefined) profileUpdateData.phone = phone;
+
+    // Only allow teacher_id linkage for teacher role
+    if (teacher_id !== undefined) {
+      const effectiveRole = (profileUpdateData.user_role ?? targetProfile.user_role) as string | null;
+      profileUpdateData.teacher_id = (effectiveRole === 'teacher') ? teacher_id : null;
+    }
 
     if (Object.keys(profileUpdateData).length > 0) {
       const { error: profileUpdateError } = await supabaseClient
