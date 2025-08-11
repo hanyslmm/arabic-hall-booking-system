@@ -593,9 +593,9 @@ const BookingsPage = () => {
       <main className="container mx-auto p-4 pt-20 space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-primary">إدارة المجموعات</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary">{profile?.user_role === 'teacher' ? 'مراقبة المجموعات' : 'إدارة المجموعات'}</h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              عرض وإدارة المجموعات الدراسية والطلاب المسجلين بها
+              {profile?.user_role === 'teacher' ? 'عرض المجموعات والطلاب ونِسَب الدفع للشهر المحدد' : 'عرض وإدارة المجموعات الدراسية والطلاب المسجلين بها'}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">

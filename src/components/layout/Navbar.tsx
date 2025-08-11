@@ -30,7 +30,6 @@ export const Navbar = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Lock body scroll when sidebar is open (mobile drawer)
   useEffect(() => {
     const body = document.body;
     if (sidebarOpen) {
@@ -71,7 +70,6 @@ export const Navbar = ({
   const isOwnerOrAdmin = userRole === 'owner' || userRole === 'manager';
   const isResourceManager = isOwnerOrAdmin || userRole === 'space_manager';
 
-  // Build navigation based on role to avoid exposing admin features to teachers
   const navigation = [
     {
       title: "الإحصائيات",
@@ -80,10 +78,11 @@ export const Navbar = ({
       ],
     },
     {
-      title: "إدارة الحجوزات",
+      title: userRole === 'teacher' ? "المجموعات" : "إدارة الحجوزات",
       items: [
-        { title: "جميع الحجوزات", url: "/bookings", icon: Calendar, description: "عرض وإدارة الحجوزات" },
-        // إنشاء حجز جديد للمسؤولين فقط
+        userRole === 'teacher'
+          ? { title: "مراقبة المجموعات", url: "/bookings", icon: Calendar, description: "عرض المجموعات والطلاب والمدفوعات" }
+          : { title: "جميع الحجوزات", url: "/bookings", icon: Calendar, description: "عرض وإدارة الحجوزات" },
         ...(
           isOwnerOrAdmin
             ? [{ title: "حجز جديد", url: "/booking", icon: Calendar, description: "إنشاء حجز جديد" }]
@@ -98,7 +97,6 @@ export const Navbar = ({
         { title: "تسجيل الطلاب", url: "/student-registrations", icon: Users, description: "تسجيل الطلاب الجدد" },
       ],
     },
-    // إدارة الموارد (القاعات/المعلمين/المواد/المراحل) للمسؤولين ومدير القاعات فقط
     ...(
       isResourceManager
         ? [{
@@ -112,7 +110,6 @@ export const Navbar = ({
           }]
         : []
     ),
-    // التقارير المالية للمسؤولين فقط
     ...(
       isOwnerOrAdmin
         ? [{
@@ -124,7 +121,6 @@ export const Navbar = ({
           }]
         : []
     ),
-    // إدارة النظام (المستخدمين/السجل/الصلاحيات/الإعدادات) للمسؤولين فقط
     ...(
       isOwnerOrAdmin
         ? [{
@@ -143,7 +139,7 @@ export const Navbar = ({
   return (
     <>
 {/* Fixed Burger Menu Button - visible only on small screens */}
-<div className="fixed top-4 right-4 z-30 lg:right-6 lg:hidden">
+<div className="fixed top-4 right-4 z-30 lg:right-6 lg:hidden flex items-center gap-2">
   <Button
     variant="default"
     size="sm"
@@ -153,13 +149,20 @@ export const Navbar = ({
     <Menu className="h-5 w-5" />
     <span className="sr-only">فتح القائمة</span>
   </Button>
+  <Button
+    variant="destructive"
+    size="sm"
+    onClick={handleSignOut}
+    disabled={isLoading}
+    className="h-10 px-3 rounded-full shadow-lg"
+  >
+    <LogOut className="h-4 w-4" />
+  </Button>
 </div>
-{/* Fixed Brand on mobile to avoid overlap with burger */}
 <div className="fixed top-4 left-4 z-30 lg:hidden">
   <div className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-bold text-base">Science Club</div>
 </div>
 
-      {/* Mobile backdrop with improved touch handling */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40"
@@ -174,14 +177,12 @@ export const Navbar = ({
         </div>
       )}
 
-      {/* Enhanced Slide-out Navigation Sidebar */}
       <div
         className={cn(
           "fixed inset-y-0 right-0 z-50 w-80 sm:w-72 transform bg-card/95 backdrop-blur-md border-l shadow-2xl transition-all duration-300 ease-out",
           sidebarOpen ? "translate-x-0 sidebar-enter" : "translate-x-full"
         )}
       >
-        {/* Sidebar Header - More compact on mobile */}
         <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 border-b bg-card/90">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -202,7 +203,6 @@ export const Navbar = ({
           </Button>
         </div>
 
-        {/* Sidebar Content with improved scrolling */}
         <ScrollArea className="flex-1 px-3 sm:px-4 py-4 h-[calc(100vh-14rem)] sm:h-[calc(100vh-16rem)]">
           {navigation.map((group) => (
             <div key={group.title} className="mb-6">
@@ -236,7 +236,6 @@ export const Navbar = ({
           ))}
         </ScrollArea>
 
-        {/* Sidebar Footer - More compact */}
         <div className="border-t p-3 sm:p-4 bg-card/90">
           <div className="flex items-center gap-2 mb-3">
             <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
@@ -254,7 +253,6 @@ export const Navbar = ({
             </div>
           </div>
           
-          {/* Theme and Notifications Row */}
           <div className="flex items-center gap-2 mb-3">
             <NotificationBell />
             <DropdownMenu>
@@ -292,13 +290,24 @@ export const Navbar = ({
         </div>
       </div>
 
-      {/* Top Navigation Bar - More minimal */}
       <nav className="border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
-<div className="flex items-center space-x-4 space-x-reverse">
-  <h1 className="hidden lg:block text-lg sm:text-xl font-bold text-primary">Science Club</h1>
-</div>
-          <div className="w-16 lg:w-0"></div> {/* Spacer for fixed burger menu on mobile */}
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <h1 className="hidden lg:block text-lg sm:text-xl font-bold text-primary">Science Club</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleSignOut}
+              disabled={isLoading}
+              className="hidden lg:flex h-8 px-3"
+            >
+              <LogOut className="h-4 w-4 mr-1" />
+              خروج
+            </Button>
+          </div>
         </div>
       </nav>
     </>
