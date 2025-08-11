@@ -19,14 +19,16 @@ import { studentRegistrationsApi } from '@/api/students';
 import { hallsApi } from '@/utils/refactored-api';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export function ReceptionistDashboard() {
   const [showFastModal, setShowFastModal] = useState(false);
   const [fastModalStudentId, setFastModalStudentId] = useState<string | undefined>(undefined);
+  const { user } = useAuth();
 
   // Get today's registrations count using server-side count (no 1000-row cap)
   const { data: todayRegistrationsCount = 0 } = useQuery({
-    queryKey: ['today-registrations-count'],
+    queryKey: ['today-registrations-count', user?.id],
     queryFn: async () => {
       const now = new Date();
       const startOfDay = new Date(
@@ -50,11 +52,13 @@ export function ReceptionistDashboard() {
 
       if (error) throw error;
       return count || 0;
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const { data: pendingPayments } = useQuery({
-    queryKey: ['pending-payments'],
+    queryKey: ['pending-payments', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('student_registrations')
@@ -64,11 +68,13 @@ export function ReceptionistDashboard() {
         .limit(10);
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const { data: pendingPaymentsCount = 0 } = useQuery({
-    queryKey: ['pending-payments-count'],
+    queryKey: ['pending-payments-count', user?.id],
     queryFn: async () => {
       const { count, error } = await supabase
         .from('student_registrations')
@@ -76,21 +82,27 @@ export function ReceptionistDashboard() {
         .in('payment_status', ['pending', 'partial']);
       if (error) throw error;
       return count || 0;
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const { data: halls } = useQuery({
-    queryKey: ['halls-occupancy'],
-    queryFn: hallsApi.getAll
+    queryKey: ['halls-occupancy', user?.id],
+    queryFn: hallsApi.getAll,
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   // Current month earnings with robust fallback (no 1000-row cap)
   const { data: monthlyEarnings } = useQuery({
-    queryKey: ['monthly-earnings'],
+    queryKey: ['monthly-earnings', user?.id],
     queryFn: async () => {
       const { fetchMonthlyEarnings } = await import('@/utils/finance');
       return await fetchMonthlyEarnings();
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const quickActions = [
@@ -277,8 +289,8 @@ export function ReceptionistDashboard() {
 
       <FastReceptionistModal 
         isOpen={showFastModal} 
-        onClose={() => { setShowFastModal(false); setFastModalStudentId(undefined); }} 
-        initialStudentId={fastModalStudentId}
+        onClose={() => setShowFastModal(false)} 
+        studentId={fastModalStudentId}
       />
     </div>
   );

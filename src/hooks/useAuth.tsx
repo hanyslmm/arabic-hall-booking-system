@@ -18,14 +18,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety timeout in case auth never resolves due to network issues
     const safetyTimeout = window.setTimeout(() => {
       console.warn("Auth loading exceeded expected time. Proceeding without full profile.");
       setLoading(false);
-    }, 8000);
+    }, 15000);
+
+    let initialSessionResolved = false;
 
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) {
           console.error("Error getting session:", error);
           setLoading(false);
@@ -34,10 +40,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         setUser(session?.user ?? null);
         if (session?.user) {
-          fetchProfile(session.user.id);
+          // fetchProfile will set loading to false in finally
+          await fetchProfile(session.user.id);
         } else {
+          // No session available
           setLoading(false);
         }
+        initialSessionResolved = true;
       } catch (error) {
         console.error("Error initializing auth:", error);
         setLoading(false);
@@ -46,14 +55,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state changed:", _event, session?.user?.id);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user?.id);
       setUser(session?.user ?? null);
+
       if (session?.user) {
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
-        setLoading(false);
+        // Only end loading if the initial session has been processed or this is explicitly INITIAL_SESSION
+        if (initialSessionResolved || event === "INITIAL_SESSION") {
+          setLoading(false);
+        }
+      }
+
+      // Ensure we do not keep loading after INITIAL_SESSION
+      if (event === "INITIAL_SESSION" && !initialSessionResolved) {
+        initialSessionResolved = true;
+        if (!session?.user) {
+          setLoading(false);
+        }
       }
     });
 

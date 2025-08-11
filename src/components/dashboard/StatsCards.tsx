@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, GraduationCap, Building, Activity, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface StatsCardsProps {
   averageOccupancy?: number;
@@ -24,15 +25,16 @@ export const StatsCards = ({
   selectedYear = new Date().getFullYear()
 }: StatsCardsProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', user?.id, selectedMonth, selectedYear],
     queryFn: async () => {
       const [
-        { count: hallsCount },
-        { count: teachersCount },
-        { count: stagesCount },
-        { count: bookingsCount },
+        { count: hallsCount, error: hallsError },
+        { count: teachersCount, error: teachersError },
+        { count: stagesCount, error: stagesError },
+        { count: bookingsCount, error: bookingsError },
         actualOccupancyData
       ] = await Promise.all([
         supabase.from('halls').select('*', { count: 'exact', head: true }),
@@ -41,6 +43,11 @@ export const StatsCards = ({
         supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.rpc('get_hall_actual_occupancy_updated')
       ]);
+
+      if (hallsError) throw hallsError;
+      if (teachersError) throw teachersError;
+      if (stagesError) throw stagesError;
+      if (bookingsError) throw bookingsError;
 
       // Calculate average occupancy based on actual student registrations
       const avgOccupancy = actualOccupancyData.data && actualOccupancyData.data.length > 0 
@@ -54,16 +61,20 @@ export const StatsCards = ({
         activeBookings: bookingsCount || 0,
         occupancyRatio: avgOccupancy
       };
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   // Monthly earnings with selected month/year support
   const { data: monthlyEarnings } = useQuery({
-    queryKey: ['monthly-earnings', selectedMonth, selectedYear],
+    queryKey: ['monthly-earnings', user?.id, selectedMonth, selectedYear],
     queryFn: async () => {
       const { fetchMonthlyEarnings } = await import('@/utils/finance');
       return await fetchMonthlyEarnings(selectedMonth, selectedYear);
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   // Get month name in Arabic

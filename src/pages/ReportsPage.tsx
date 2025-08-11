@@ -53,7 +53,7 @@ export function ReportsPage() {
 
   // Fetch dashboard statistics
   const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', user?.id],
     queryFn: async () => {
       const [bookingsRes, teachersRes, hallsRes] = await Promise.all([
         supabase.from('bookings').select('id, status'),
@@ -72,12 +72,14 @@ export function ReportsPage() {
         totalTeachers,
         totalHalls
       } as DashboardStats;
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   // Fetch all bookings with financial data
   const reportsQuery = useQuery({
-    queryKey: ['bookings-report'],
+    queryKey: ['bookings-report', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
@@ -85,7 +87,9 @@ export function ReportsPage() {
         .order('start_date', { ascending: false });
       if (error) throw error;
       return data as any[];
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   // Calculate total revenue

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, Activity } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HallScheduleModal } from "@/components/hall/HallScheduleModal";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Hall {
   id: string;
@@ -26,9 +27,10 @@ interface HallsGridProps {
 
 export const HallsGrid = ({ occupancyData }: HallsGridProps) => {
   const [selectedHall, setSelectedHall] = useState<{ id: string; name: string } | null>(null);
+  const { user } = useAuth();
 
   const { data: halls, isLoading, error } = useQuery({
-    queryKey: ['halls'],
+    queryKey: ['halls', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('halls')
@@ -37,7 +39,9 @@ export const HallsGrid = ({ occupancyData }: HallsGridProps) => {
       
       if (error) throw error;
       return data as Hall[];
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const getCapacityVariant = (capacity: number) => {
@@ -88,7 +92,7 @@ export const HallsGrid = ({ occupancyData }: HallsGridProps) => {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-destructive">حدث خطأ في تحميل القاعات</p>
+        <p className="text-destructive">حدث خطأ في تحميل القاعات. يرجى تسجيل الدخول مرة أخرى إذا استمر الخطأ.</p>
       </div>
     );
   }

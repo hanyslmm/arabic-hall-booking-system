@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
-import LoginPage from "@/pages/LoginPage";
+
 import { UnifiedLayout } from "@/components/layout/UnifiedLayout";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";

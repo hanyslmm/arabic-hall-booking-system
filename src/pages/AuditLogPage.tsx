@@ -45,7 +45,7 @@ export function AuditLogPage() {
 
   // Fetch audit logs with actor names
   const { data: auditLogs, isLoading } = useQuery({
-    queryKey: ['audit-logs'],
+    queryKey: ['audit-logs', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_logs')
@@ -84,7 +84,9 @@ export function AuditLogPage() {
           actor_name: profile?.full_name || profile?.email || 'مستخدم محذوف'
         };
       }) as AuditLog[];
-    }
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 
   const getActionDisplayName = (action: string) => {
