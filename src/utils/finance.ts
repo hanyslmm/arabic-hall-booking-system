@@ -15,8 +15,16 @@ export async function getCurrentMonthDateRange(): Promise<{ startDate: string; e
   return { startDate: formatDate(start), endDateExclusive: formatDate(nextMonthStart) };
 }
 
-export async function fetchMonthlyEarnings(): Promise<number> {
-  const { startDate, endDateExclusive } = await getCurrentMonthDateRange();
+export async function getMonthDateRange(month: number, year: number): Promise<{ startDate: string; endDateExclusive: string }> {
+  const start = new Date(year, month - 1, 1); // month is 1-indexed, Date constructor expects 0-indexed
+  const nextMonthStart = new Date(year, month, 1);
+  return { startDate: formatDate(start), endDateExclusive: formatDate(nextMonthStart) };
+}
+
+export async function fetchMonthlyEarnings(month?: number, year?: number): Promise<number> {
+  const { startDate, endDateExclusive } = month && year 
+    ? await getMonthDateRange(month, year)
+    : await getCurrentMonthDateRange();
 
   // Try RPC first (fast, server-side sum, no row cap)
   try {

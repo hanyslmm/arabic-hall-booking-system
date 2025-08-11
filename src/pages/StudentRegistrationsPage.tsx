@@ -11,8 +11,10 @@ import { useTableData } from '@/hooks/useTableData';
 import { PaginatedTable } from '@/components/common/PaginatedTable';
 import { FastReceptionistModal } from '@/components/receptionist/FastReceptionistModal';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function StudentRegistrationsPage() {
+  const { profile } = useAuth();
   const [showFastModal, setShowFastModal] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
@@ -54,6 +56,9 @@ export default function StudentRegistrationsPage() {
     { value: 12, label: 'ديسمبر' },
   ];
 
+  // Check if user can register students (not teachers)
+  const canRegisterStudents = profile?.user_role !== 'teacher';
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -61,10 +66,12 @@ export default function StudentRegistrationsPage() {
           <Users className="h-8 w-8" />
           تسجيلات الطلاب
         </h1>
-        <Button onClick={() => setShowFastModal(true)} className="bg-green-600 hover:bg-green-700">
-          <Clock className="h-4 w-4 mr-2" />
-          التسجيل السريع
-        </Button>
+        {canRegisterStudents && (
+          <Button onClick={() => setShowFastModal(true)} className="bg-green-600 hover:bg-green-700">
+            <Clock className="h-4 w-4 mr-2" />
+            التسجيل السريع
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

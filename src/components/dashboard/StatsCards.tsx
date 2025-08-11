@@ -11,13 +11,17 @@ interface StatsCardsProps {
   timeSlotAvailability?: number;
   totalSlots?: number;
   bookedSlots?: number;
+  selectedMonth?: number;
+  selectedYear?: number;
 }
 
 export const StatsCards = ({ 
   averageOccupancy = 0, 
   timeSlotAvailability = 0,
   totalSlots = 0,
-  bookedSlots = 0 
+  bookedSlots = 0,
+  selectedMonth = new Date().getMonth() + 1,
+  selectedYear = new Date().getFullYear()
 }: StatsCardsProps) => {
   const navigate = useNavigate();
 
@@ -53,14 +57,25 @@ export const StatsCards = ({
     }
   });
 
-  // Current month earnings with robust fallback (no 1000-row cap)
+  // Monthly earnings with selected month/year support
   const { data: monthlyEarnings } = useQuery({
-    queryKey: ['monthly-earnings'],
+    queryKey: ['monthly-earnings', selectedMonth, selectedYear],
     queryFn: async () => {
       const { fetchMonthlyEarnings } = await import('@/utils/finance');
-      return await fetchMonthlyEarnings();
+      return await fetchMonthlyEarnings(selectedMonth, selectedYear);
     }
   });
+
+  // Get month name in Arabic
+  const getMonthName = (month: number) => {
+    const monthNames = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return monthNames[month - 1] || 'غير محدد';
+  };
+
+  const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear();
 
   const statsData = [
     {
@@ -99,7 +114,7 @@ export const StatsCards = ({
       onClick: () => navigate('/halls')
     },
     {
-      title: "إيرادات هذا الشهر",
+      title: isCurrentMonth ? "إيرادات هذا الشهر" : `إيرادات ${getMonthName(selectedMonth)} ${selectedYear}`,
       value: `${Number(monthlyEarnings || 0).toLocaleString()} LE`,
       icon: TrendingUp,
       color: "text-green-600",

@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { teacherAuthApi, TeacherStatistics } from "@/api/teacher-auth";
 import { Users, BookOpen, DollarSign, Clock, TrendingUp, AlertCircle } from "lucide-react";
 import { formatShortArabicDate } from "@/utils/dateUtils";
@@ -12,26 +13,33 @@ import { formatShortArabicDate } from "@/utils/dateUtils";
 const TeacherDashboard = () => {
   const { profile } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const handleMonthChange = (month: number, year: number) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+  };
 
   // Get teacher statistics
   const { data: statistics, isLoading: statsLoading } = useQuery({
-    queryKey: ['teacher-statistics', profile?.teacher_id],
-    queryFn: () => teacherAuthApi.getStatistics(profile?.teacher_id!),
+    queryKey: ['teacher-statistics', profile?.teacher_id, selectedMonth, selectedYear],
+    queryFn: () => teacherAuthApi.getStatistics(profile?.teacher_id!, selectedMonth, selectedYear),
     enabled: !!profile?.teacher_id && profile?.user_role === 'teacher'
   });
 
-  // Get teacher bookings
+  // Get teacher bookings - now passing teacher_id
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
-    queryKey: ['teacher-bookings'],
-    queryFn: teacherAuthApi.getMyBookings,
-    enabled: profile?.user_role === 'teacher'
+    queryKey: ['teacher-bookings', profile?.teacher_id],
+    queryFn: () => teacherAuthApi.getMyBookings(profile?.teacher_id!),
+    enabled: !!profile?.teacher_id && profile?.user_role === 'teacher'
   });
 
-  // Get student registrations
+  // Get student registrations - now passing teacher_id
   const { data: registrations, isLoading: registrationsLoading } = useQuery({
-    queryKey: ['teacher-registrations'],
-    queryFn: teacherAuthApi.getMyStudentRegistrations,
-    enabled: profile?.user_role === 'teacher'
+    queryKey: ['teacher-registrations', profile?.teacher_id],
+    queryFn: () => teacherAuthApi.getMyStudentRegistrations(profile?.teacher_id!),
+    enabled: !!profile?.teacher_id && profile?.user_role === 'teacher'
   });
 
   if (profile?.user_role !== 'teacher') {
@@ -75,6 +83,17 @@ const TeacherDashboard = () => {
     attendance_rate: 0
   };
 
+  // Get month name in Arabic
+  const getMonthName = (month: number) => {
+    const monthNames = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    return monthNames[month - 1] || 'غير محدد';
+  };
+
+  const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar 
@@ -95,6 +114,13 @@ const TeacherDashboard = () => {
             </p>
           </div>
         </div>
+
+        {/* Month Selector */}
+        <MonthSelector 
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={handleMonthChange}
+        />
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -122,12 +148,16 @@ const TeacherDashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">الأرباح الشهرية</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {isCurrentMonth ? "الأرباح الشهرية" : `أرباح ${getMonthName(selectedMonth)} ${selectedYear}`}
+              </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.monthly_earnings.toLocaleString()} ج.م</div>
-              <p className="text-xs text-muted-foreground">هذا الشهر</p>
+              <p className="text-xs text-muted-foreground">
+                {isCurrentMonth ? "هذا الشهر" : "للشهر المحدد"}
+              </p>
             </CardContent>
           </Card>
 

@@ -2,14 +2,17 @@ import { useAuth } from "@/hooks/useAuth";
 import LoginPage from "@/pages/LoginPage";
 import { UnifiedLayout } from "@/components/layout/UnifiedLayout";
 import { StatsCards } from "@/components/dashboard/StatsCards";
+import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { HallsGrid } from "@/components/dashboard/HallsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
   const [hasError, setHasError] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   
   console.log('Index component rendering...', { user: !!user, loading });
 
@@ -24,6 +27,11 @@ const Index = () => {
     
     return () => window.removeEventListener('error', handleError);
   }, []);
+
+  const handleMonthChange = (month: number, year: number) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+  };
 
   if (hasError) {
     return (
@@ -69,6 +77,11 @@ const Index = () => {
 
   console.log('User authenticated, showing dashboard');
   
+  // Teachers get their own dashboard through UnifiedLayout, so return empty content
+  if (profile?.user_role === 'teacher') {
+    return <UnifiedLayout><div /></UnifiedLayout>;
+  }
+  
   return (
     <UnifiedLayout>
       <div className="space-y-8">
@@ -76,7 +89,16 @@ const Index = () => {
           <h1 className="text-3xl font-bold tracking-tight">لوحة التحكم</h1>
         </div>
 
-        <StatsCards />
+        <MonthSelector 
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={handleMonthChange}
+        />
+
+        <StatsCards 
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+        />
 
         <HallsGrid />
       </div>
