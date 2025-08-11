@@ -45,12 +45,17 @@ interface StudentInfo {
 export function FastReceptionistModal({ isOpen, onClose, initialStudentId }: FastReceptionistModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<StudentInfo | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [selectedRegistrationId, setSelectedRegistrationId] = useState('');
+  const [selectedForAttendance, setSelectedForAttendance] = useState<Record<string, boolean>>({});
+  const [markPaid, setMarkPaid] = useState<Record<string, boolean>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 const queryClient = useQueryClient();
   const [showScanner, setShowScanner] = useState(false);
+
+  const today = new Date();
+  const weekdays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  const todayWeekday = weekdays[today.getDay()];
+  const todayISO = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     let cancelled = false;
@@ -81,19 +86,40 @@ const queryClient = useQueryClient();
   const { data: registrations } = useQuery({
     queryKey: ['student-registrations', selectedStudent?.id],
     queryFn: async () => {
-      if (!selectedStudent?.id) return [];
-      const allRegistrations = await studentRegistrationsApi.getAll();
-      return allRegistrations.filter(reg => reg.student_id === selectedStudent.id);
+      if (!selectedStudent?.id) return [] as any[];
+      return await studentRegistrationsApi.getByStudentWithPayments(selectedStudent.id);
     },
     enabled: !!selectedStudent?.id
   });
+
+  // Initialize selections when registrations change
+  useEffect(() => {
+    if (!registrations) return;
+    const sel: Record<string, boolean> = {};
+    const paid: Record<string, boolean> = {};
+    (registrations as any[]).forEach((reg: any) => {
+      const isToday = (reg.booking?.days_of_week || []).includes(todayWeekday);
+      sel[reg.id] = isToday;
+      // Paid this month if any payment record within current month or status says paid and payment_date in current month
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const paidThisMonth = (reg.payment_records || []).some((p: any) => {
+        const d = new Date(p.payment_date);
+        return d >= monthStart && d < monthEnd;
+      }) || (reg.payment_status === 'paid');
+      paid[reg.id] = false; // default unchecked; will be disabled if already paid
+      (reg as any)._paidThisMonth = paidThisMonth;
+    });
+    setSelectedForAttendance(sel);
+    setMarkPaid(paid);
+  }, [JSON.stringify(registrations), todayWeekday]);
 
   const paymentMutation = useMutation({
     mutationFn: async (data: { registrationId: string; amount: number }) => {
       return await paymentsApi.create({
         student_registration_id: data.registrationId,
         amount: data.amount,
-        payment_date: new Date().toISOString().split('T')[0],
+        payment_date: todayISO,
         payment_method: 'cash',
         notes: `Fast payment - ${format(new Date(), 'MMM dd, yyyy HH:mm')}`
       });
@@ -101,8 +127,6 @@ const queryClient = useQueryClient();
     onSuccess: () => {
       toast({ title: 'تم إضافة الدفعة بنجاح', description: 'تم تسجيل الدفعة في النظام' });
       queryClient.invalidateQueries({ queryKey: ['student-registrations'] });
-      setPaymentAmount('');
-      setSelectedRegistrationId('');
     },
     onError: (error) => {
       toast({ title: 'خطأ في إضافة الدفعة', description: String(error), variant: 'destructive' });
@@ -111,8 +135,7 @@ const queryClient = useQueryClient();
 
   const attendanceMutation = useMutation({
     mutationFn: async (registrationId: string) => {
-      const today = new Date().toISOString().split('T')[0];
-      return await attendanceApi.markPresentForDate(registrationId, today);
+      return await attendanceApi.markPresentForDate(registrationId, todayISO);
     },
     onSuccess: () => {
       toast({ title: 'تم تسجيل الحضور اليوم', description: 'تم وضع علامة حضور لهذا التسجيل' });
@@ -121,6 +144,46 @@ const queryClient = useQueryClient();
       toast({ title: 'خطأ في تسجيل الحضور', description: String(error), variant: 'destructive' });
     }
   });
+
+  const handleConfirm = async () => {
+    if (!registrations || !selectedStudent) return;
+    const regs = registrations as any[];
+    const selectedIds = regs.filter(r => selectedForAttendance[r.id]).map(r => r.id);
+    if (selectedIds.length === 0) {
+      toast({ title: 'لا توجد دروس محددة لليوم', variant: 'destructive' });
+      return;
+    }
+    // Mark attendance for selected
+    await Promise.all(selectedIds.map(id => attendanceMutation.mutateAsync(id)));
+    // Create full payments where requested
+    await Promise.all(regs.map(async (r) => {
+      if (markPaid[r.id] && !(r as any)._paidThisMonth) {
+        const amount = Number(r.total_fees || 0);
+        if (amount > 0) {
+          await paymentMutation.mutateAsync({ registrationId: r.id, amount });
+        }
+      }
+    }));
+    // Reset for next student
+    setSelectedStudent(null);
+    setSearchTerm('');
+    setSelectedForAttendance({});
+    setMarkPaid({});
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+
+  // Hit Enter to confirm
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleConfirm();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, selectedForAttendance, markPaid, registrations]);
 
   // Auto-focus search when modal opens
   useEffect(() => {
@@ -333,7 +396,7 @@ const queryClient = useQueryClient();
 
                   <Separator />
 
-                  {/* Registrations */}
+                  {/* Registrations - preselect today's classes, with payment checkbox */}
                   <div className="space-y-3">
                     <h4 className="font-medium">التسجيلات الحالية</h4>
                     {registrations && registrations.length > 0 ? (
@@ -360,23 +423,36 @@ const queryClient = useQueryClient();
                                   <div>الوقت: {reg.booking?.start_time ? formatTime(reg.booking.start_time) : 'غير محدد'}</div>
                                   <div>الأيام: {reg.booking?.days_of_week ? formatDays(reg.booking.days_of_week) : 'غير محدد'}</div>
                                 </div>
-                                
+ 
                                 <div className="flex items-center justify-between text-sm">
-                                  <span>الرسوم: {reg.total_fees} LE</span>
-                                  <span>المدفوع: {reg.paid_amount} LE</span>
-                                  <span className="font-medium">
-                                    المتبقي: {(reg.total_fees - reg.paid_amount)} LE
-                                  </span>
+                                  <label className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!selectedForAttendance[reg.id]}
+                                      onChange={(e) => setSelectedForAttendance(prev => ({ ...prev, [reg.id]: e.target.checked }))}
+                                    />
+                                    <span>تأكيد حضور اليوم</span>
+                                  </label>
+                                  <div className="flex items-center gap-3">
+                                    <span>رسوم: {reg.total_fees} LE</span>
+                                    {(reg as any)._paidThisMonth ? (
+                                      <Badge variant="secondary">مدفوع هذا الشهر</Badge>
+                                    ) : (
+                                      <label className="flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!markPaid[reg.id]}
+                                          onChange={(e) => setMarkPaid(prev => ({ ...prev, [reg.id]: e.target.checked }))}
+                                        />
+                                        <span>تأكيد استلام رسوم هذا الشهر</span>
+                                      </label>
+                                    )}
+                                  </div>
                                 </div>
-
+ 
                                 <div className="flex items-center justify-end gap-2 pt-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => attendanceMutation.mutate(reg.id)}
-                                    disabled={attendanceMutation.isPending}
-                                  >
-                                    وضع حضور اليوم
+                                  <Button size="sm" variant="default" onClick={handleConfirm}>
+                                    تأكيد (Enter)
                                   </Button>
                                 </div>
                               </div>
@@ -391,57 +467,7 @@ const queryClient = useQueryClient();
                     )}
                   </div>
 
-                  <Separator />
-
-                  {/* Payment Form */}
-                  {registrations && registrations.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        إضافة دفعة
-                      </h4>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="registration">اختيار التسجيل</Label>
-                          <select
-                            id="registration"
-                            value={selectedRegistrationId}
-                            onChange={(e) => setSelectedRegistrationId(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                          >
-                            <option value="">اختر التسجيل...</option>
-                            {registrations.map((reg) => (
-                              <option key={reg.id} value={reg.id}>
-                                {reg.booking?.class_code} - متبقي: {(reg.total_fees - reg.paid_amount)} LE
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="amount">مبلغ الدفعة (LE)</Label>
-                          <Input
-                            id="amount"
-                            type="number"
-                            value={paymentAmount}
-                            onChange={(e) => setPaymentAmount(e.target.value)}
-                            placeholder="ادخل المبلغ..."
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        
-                        <Button 
-                          onClick={handlePayment}
-                          disabled={paymentMutation.isPending || !selectedRegistrationId || !paymentAmount}
-                          className="w-full"
-                        >
-                          {paymentMutation.isPending ? 'جاري الحفظ...' : 'تسجيل الدفعة'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  {/* Payment section removed; handled inline with full-fee confirmation */}
                 </>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

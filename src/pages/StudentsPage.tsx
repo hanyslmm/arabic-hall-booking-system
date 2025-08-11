@@ -12,12 +12,13 @@ import { AddStudentModal } from "@/components/student/AddStudentModal";
 import { EditStudentModal } from "@/components/student/EditStudentModal";
 import { BulkUploadModal } from "@/components/student/BulkUploadModal";
 import { studentsApi, Student } from "@/api/students";
-import { Plus, Search, Scan, Upload, Edit, Trash2, Users, Phone, MapPin, Calendar } from "lucide-react";
+import { Plus, Search, Scan, Upload, Edit, Trash2, Users, Phone, MapPin, Calendar, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { formatShortArabicDate } from "@/utils/dateUtils";
 import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 import { Scanner } from '@alzera/react-scanner';
 import { useDebounce } from '@/hooks/useDebounce';
+import { StudentQRCodeModal } from '@/components/student/StudentQRCodeModal';
 
 const PAGE_SIZE = 50;
 const StudentsPage = () => {
@@ -27,6 +28,7 @@ const StudentsPage = () => {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Student | null>(null);
+  const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [page, setPage] = useState(1);
@@ -160,7 +162,17 @@ const StudentsPage = () => {
   ];
 
   // Table actions for edit/delete
-  const studentActions: TableAction<Student>[] = canManageStudents ? [
+  const baseActions: TableAction<Student>[] = [
+    {
+      label: 'QR',
+      onClick: (student) => setQrStudent(student),
+      variant: 'outline',
+      size: 'sm',
+      icon: <QrCode className="h-4 w-4" />,
+    },
+  ];
+
+  const manageActions: TableAction<Student>[] = canManageStudents ? [
     {
       label: 'تعديل',
       onClick: (student) => setEditingStudent(student),
@@ -176,6 +188,8 @@ const StudentsPage = () => {
       icon: <Trash2 className="h-4 w-4" />,
     },
   ] : [];
+
+  const studentActions: TableAction<Student>[] = canManageStudents ? [...baseActions, ...manageActions] : baseActions;
 
   // Render expanded content for each student (details only)
   const renderExpandedStudentContent = (student: Student) => (
@@ -358,8 +372,14 @@ const StudentsPage = () => {
           onClose={() => setShowBulkUpload(false)}
         />
 
-        
-        
+        {qrStudent && (
+          <StudentQRCodeModal
+            student={qrStudent}
+            isOpen={true}
+            onClose={() => setQrStudent(null)}
+          />
+        )}
+
         {editingStudent && (
           <EditStudentModal 
             student={editingStudent}

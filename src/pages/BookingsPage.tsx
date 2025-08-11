@@ -30,6 +30,7 @@ import {
 import { MobileResponsiveTable, TableColumn, TableAction } from "@/components/common/MobileResponsiveTable";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { studentRegistrationsApi } from "@/api/students";
 
 interface Booking {
   id: string;
@@ -190,25 +191,13 @@ const BookingsPage = () => {
         return [] as (Booking & { actual_student_count: number })[];
       }
 
-      // Batch fetch counts per booking to avoid N+1 queries
+      // Batch fetch counts per booking to avoid N+1 queries (single source of truth)
       const bookingIds = bookingsData.map((b: any) => b.id);
-      const { data: registrationRows, error: registrationsError } = await supabase
-        .from('student_registrations')
-        .select('booking_id')
-        .in('booking_id', bookingIds);
-
-      // Build a map of booking_id -> count; fall back to 0 on any error
-      const idToCount = new Map<string, number>();
-      if (!registrationsError && Array.isArray(registrationRows)) {
-        for (const row of registrationRows as Array<{ booking_id: string }>) {
-          const prev = idToCount.get(row.booking_id) ?? 0;
-          idToCount.set(row.booking_id, prev + 1);
-        }
-      }
+      const idToCountObj = await studentRegistrationsApi.countByBookingIds(bookingIds);
 
       const enriched = (bookingsData as any[]).map((booking) => ({
         ...booking,
-        actual_student_count: idToCount.get(booking.id) ?? 0,
+        actual_student_count: idToCountObj[booking.id] ?? 0,
       }));
       
       return enriched as (Booking & { actual_student_count: number })[];

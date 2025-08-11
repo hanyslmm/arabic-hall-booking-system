@@ -21,6 +21,7 @@ import { studentsApi } from '@/api/students';
 import { BulkUploadModal } from '@/components/student/BulkUploadModal';
 import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
+import { studentRegistrationsApi } from '@/api/students';
 
 interface AttendanceRecord {
   student_registration_id: string;
@@ -69,6 +70,14 @@ export default function ClassManagementPage() {
     queryKey: ['registrations', bookingId],
     queryFn: () => studentRegistrationsApi.getByBooking(bookingId!),
     enabled: !!bookingId,
+  });
+
+  // Unified count of students in class (source of truth: student_registrations)
+  const { data: actualStudentCount } = useQuery({
+    queryKey: ['registration-count', bookingId],
+    queryFn: () => studentRegistrationsApi.countByBookingId(bookingId!),
+    enabled: !!bookingId,
+    staleTime: 60_000,
   });
 
   // Fetch all students for adding new ones
@@ -439,7 +448,7 @@ export default function ClassManagementPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium">عدد الطلاب</Label>
-                <p className="text-lg">{registrations?.length || 0} طالب</p>
+                <p className="text-lg">{actualStudentCount ?? 0} طالب</p>
               </div>
             </div>
           </CardContent>

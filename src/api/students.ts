@@ -220,6 +220,49 @@ export const studentRegistrationsApi = {
     return data as StudentRegistration[];
   },
 
+  async getByStudentWithPayments(studentId: string): Promise<StudentRegistration[]> {
+    const { data, error } = await supabase
+      .from("student_registrations")
+      .select(`
+        *,
+        student:students(*),
+        booking:bookings(
+          *,
+          halls(name),
+          teachers(name),
+          academic_stages(name)
+        ),
+        payment_records(amount, payment_date)
+      `)
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data as StudentRegistration[];
+  },
+
+  async countByBookingId(bookingId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from("student_registrations")
+      .select("id", { count: 'exact', head: true })
+      .eq("booking_id", bookingId);
+    if (error) throw error;
+    return count || 0;
+  },
+
+  async countByBookingIds(bookingIds: string[]): Promise<Record<string, number>> {
+    if (!bookingIds || bookingIds.length === 0) return {};
+    const { data, error } = await supabase
+      .from("student_registrations")
+      .select("booking_id")
+      .in("booking_id", bookingIds);
+    if (error) throw error;
+    const map: Record<string, number> = {};
+    (data as Array<{ booking_id: string }>).forEach(row => {
+      map[row.booking_id] = (map[row.booking_id] || 0) + 1;
+    });
+    return map;
+  },
+
   async create(registrationData: {
     student_id: string;
     booking_id: string;
