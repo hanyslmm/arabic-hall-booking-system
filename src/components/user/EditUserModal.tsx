@@ -21,7 +21,7 @@ const editUserSchema = z.object({
   email: z.string().email("يرجى إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
   phone: z.string().optional(),
   password: z.string().min(3, "كلمة المرور يجب أن تكون 3 أحرف على الأقل").optional().or(z.literal("")),
-  user_role: z.enum(["owner", "manager", "space_manager", "teacher"], {
+  user_role: z.enum(["owner", "manager", "space_manager", "teacher", "read_only"], {
     errorMap: () => ({ message: "يرجى اختيار الدور" })
   }),
   teacher_id: z.string().optional()

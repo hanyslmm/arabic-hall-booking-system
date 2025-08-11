@@ -167,6 +167,11 @@ const LogoutButton = () => {
       console.error('Error signing out:', error);
     }
     setIsLoading(false);
+    try {
+      window.location.replace('/login');
+    } catch (e) {
+      window.location.href = '/login';
+    }
   };
 
   return (

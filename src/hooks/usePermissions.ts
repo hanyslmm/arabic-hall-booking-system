@@ -15,9 +15,12 @@ export const usePermissions = (profile: UserProfile | null): AuthPermissions => 
       };
     }
 
-    const isOwner = profile.user_role === USER_ROLES.OWNER;
-    const isManager = profile.user_role === USER_ROLES.MANAGER;
-    const isAdmin = isOwner || isManager; // Admin is now derived from user_role (owner or manager)
+    const userRole = profile.user_role;
+    const appRole = (profile as any).role as string | undefined;
+
+    const isOwner = userRole === USER_ROLES.OWNER || appRole === 'ADMIN';
+    const isManager = userRole === USER_ROLES.MANAGER;
+    const isAdmin = isOwner || isManager; // Admin is derived from owner or manager, or legacy ADMIN role
 
     return {
       isOwner,

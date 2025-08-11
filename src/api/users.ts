@@ -5,7 +5,7 @@ export type UserProfile = {
   email: string | null;
   full_name: string | null;
   phone: string | null;
-user_role: 'owner' | 'manager' | 'space_manager' | 'teacher';
+user_role: 'owner' | 'manager' | 'space_manager' | 'teacher' | 'read_only';
 created_at: string;
 username?: string | null;
 teacher_id?: string | null;
@@ -17,14 +17,14 @@ export type CreateUserData = {
   email?: string;
   full_name?: string;
   phone?: string;
-  user_role: 'owner' | 'manager' | 'space_manager' | 'teacher';
+  user_role: 'owner' | 'manager' | 'space_manager' | 'teacher' | 'read_only';
 };
 
 export type UpdateUserData = {
   full_name?: string;
   phone?: string;
   email?: string;
-  user_role?: 'owner' | 'manager' | 'space_manager' | 'teacher';
+  user_role?: 'owner' | 'manager' | 'space_manager' | 'teacher' | 'read_only';
   password?: string;
 };
 
@@ -105,7 +105,7 @@ teacher_id: (userData as any).teacher_id,
   return { ...data, phone: userData.phone || null } as UserProfile;
 };
 
-export const updateUserRole = async (userId: string, newRole: 'owner' | 'manager' | 'space_manager' | 'teacher') => {
+export const updateUserRole = async (userId: string, newRole: 'owner' | 'manager' | 'space_manager' | 'teacher' | 'read_only') => {
   const { data, error } = await supabase
     .from("profiles")
     .update({ user_role: newRole })

@@ -27,13 +27,13 @@ export const isCurrentUserAdmin = async (): Promise<boolean> => {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('user_role')
+      .select('user_role, role')
       .eq('id', user.id)
       .single();
 
-    if (error) return false;
+    if (error || !data) return false;
 
-    return data.user_role === 'owner' || data.user_role === 'manager';
+    return data.user_role === 'owner' || data.user_role === 'manager' || (data as any).role === 'ADMIN';
   } catch (error) {
     console.error('Error checking admin privileges:', error);
     return false;

@@ -47,6 +47,12 @@ export const Navbar = ({
       console.error('Error signing out:', error);
     }
     setIsLoading(false);
+    try {
+      window.location.replace('/login');
+    } catch (e) {
+      // Fallback navigation
+      window.location.href = '/login';
+    }
   };
 
   const getRoleBadge = (role?: string) => {

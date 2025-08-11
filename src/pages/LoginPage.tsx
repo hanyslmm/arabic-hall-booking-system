@@ -15,72 +15,71 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const trySignIn = async (emailCandidate: string, pwd: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: emailCandidate, password: pwd });
+    return error;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Check if input is an email or username
-      let loginEmail = username;
-      
-      // If it doesn't contain @, it's likely a username, so we need to find the corresponding email
-      if (!username.includes('@')) {
-        const normalized = username.trim().toLowerCase();
-        // Handle well-known system usernames explicitly
-        if (normalized === 'admin') {
-          loginEmail = 'admin@system.local';
-        } else if (normalized === 'sc_manager' || normalized === 'sc-manager' || normalized === 'scmanager') {
-          loginEmail = 'sc_manager@system.local';
-        } else {
-          // First try to find the user by username in profiles
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('full_name', username)
-            .single();
-          
-          if (!profileError && profileData?.email) {
-            loginEmail = profileData.email;
-          } else {
-            // If no profile found with username, try the generated email format
-            loginEmail = `${username}@local.app`;
+      const raw = username.trim();
+      const isEmailInput = raw.includes("@");
+      const normalized = raw.toLowerCase();
+
+      // Build candidate emails in order of likelihood without hitting DB first
+      const candidates: string[] = [];
+      if (isEmailInput) {
+        candidates.push(raw);
+      } else {
+        if (normalized === "admin") {
+          candidates.push("admin@system.local");
+        } else if (["sc_manager", "sc-manager", "scmanager"].includes(normalized)) {
+          candidates.push("sc_manager@system.local");
+        }
+        // Generated email convention
+        candidates.push(`${raw}@local.app`);
+      }
+
+      // Try candidates sequentially
+      let lastError: any = null;
+      for (const candidate of candidates) {
+        const error = await trySignIn(candidate, password);
+        if (!error) {
+          toast({ title: "تم تسجيل الدخول", description: "مرحبًا بك!" });
+          navigate("/", { replace: true });
+          return;
+        }
+        lastError = error;
+      }
+
+      // Fallback: resolve by profiles.username -> email, then try
+      if (!isEmailInput) {
+        const { data: profileByUsername } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("username", raw)
+          .maybeSingle();
+
+        if (profileByUsername?.email) {
+          const error = await trySignIn(profileByUsername.email, password);
+          if (!error) {
+            toast({ title: "تم تسجيل الدخول", description: "مرحبًا بك!" });
+            navigate("/", { replace: true });
+            return;
           }
+          lastError = error;
         }
       }
 
-      // Standard user authentication
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password
-      });
-
-      if (error) {
-        // If login failed and we used generated email, try with original input as email
-        if (loginEmail.endsWith('@local.app') && loginEmail !== username) {
-          const { error: retryError } = await supabase.auth.signInWithPassword({
-            email: username,
-            password
-          });
-          
-          if (retryError) {
-            throw retryError;
-          }
-        } else {
-          throw error;
-        }
-      }
-
-      toast({
-        title: "تم تسجيل الدخول",
-        description: "مرحبًا بك!"
-      });
-      navigate("/", { replace: true });
-
+      throw lastError || new Error("فشل تسجيل الدخول");
     } catch (error: any) {
       toast({
         title: "فشل تسجيل الدخول",
-        description: error.message || "خطأ في تسجيل الدخول",
-        variant: "destructive"
+        description: error?.message || "خطأ في تسجيل الدخول",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -108,22 +107,22 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <Input 
-                type="text" 
-                placeholder="اسم المستخدم أو البريد الإلكتروني" 
-                value={username} 
-                onChange={e => setUsername(e.target.value)} 
-                required 
-                autoFocus 
+              <Input
+                type="text"
+                placeholder="اسم المستخدم أو البريد الإلكتروني"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                autoFocus
               />
             </div>
             <div>
-              <Input 
-                type="password" 
-                placeholder="كلمة المرور" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                required 
+              <Input
+                type="password"
+                placeholder="كلمة المرور"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

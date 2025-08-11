@@ -180,6 +180,7 @@ body: {
   <SelectItem value="manager">مدير</SelectItem>
   <SelectItem value="owner">مالك</SelectItem>
   <SelectItem value="teacher">معلم</SelectItem>
+  <SelectItem value="read_only">قراءة فقط</SelectItem>
 </SelectContent>
               </Select>
               {form.formState.errors.user_role && (
