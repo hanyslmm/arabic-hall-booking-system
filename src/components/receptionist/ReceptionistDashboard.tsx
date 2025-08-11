@@ -62,7 +62,15 @@ export function ReceptionistDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('student_registrations')
-        .select('*')
+        .select(`
+          id,
+          student_id,
+          total_fees,
+          paid_amount,
+          payment_status,
+          created_at,
+          student:students(name, serial_number)
+        `)
         .in('payment_status', ['pending', 'partial'])
         .order('created_at', { ascending: false })
         .limit(10);
@@ -224,7 +232,7 @@ export function ReceptionistDashboard() {
             onClick={action.action}
           >
             <CardContent className="p-6">
-              <div className="flex items-center space-x-4 rtl:space-x-reverse">
+              <div className="flex items-center gap-4">
                 <div className={`${action.color} p-3 rounded-lg text-white group-hover:scale-110 transition-transform`}>
                   <action.icon className="h-6 w-6" />
                 </div>
@@ -252,26 +260,36 @@ export function ReceptionistDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-60 overflow-y-auto">
-              {pendingPayments.map((reg) => (
-                <div key={reg.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="space-y-1">
-                    <div className="font-medium">طالب #{reg.student_id}</div>
-                    <div className="text-sm text-muted-foreground">
-                      الرسوم: {reg.total_fees} LE - المدفوع: {reg.paid_amount} LE
+              {pendingPayments.map((reg: any) => (
+                <div
+                  key={reg.id}
+                  className="p-4 rounded-lg border border-border bg-card/50 border-r-4 border-orange-400"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col text-right">
+                      <span className="font-semibold text-sm md:text-base">
+                        {reg?.student?.name || `طالب #${reg.student_id}`}
+                      </span>
+                      {reg?.student?.serial_number && (
+                        <Badge variant="secondary" className="mt-1 w-fit ml-auto">
+                          {reg.student.serial_number}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={reg.payment_status === 'pending' ? 'destructive' : 'secondary'}>
-                      {reg.payment_status === 'pending' ? 'معلق' : 'جزئي'}
-                    </Badge>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      المتبقي: {reg.total_fees - reg.paid_amount} LE
-                    </div>
-                    <div className="mt-2">
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant={reg.payment_status === 'pending' ? 'destructive' : 'secondary'}>
+                        {reg.payment_status === 'pending' ? 'معلق' : 'جزئي'}
+                      </Badge>
                       <Button size="sm" onClick={() => { setFastModalStudentId(reg.student_id); setShowFastModal(true); }}>
                         تحصيل
                       </Button>
                     </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground justify-end">
+                    <span>الرسوم: {reg.total_fees}</span>
+                    <span>المدفوع: {reg.paid_amount}</span>
+                    <span>المتبقي: {reg.total_fees - reg.paid_amount}</span>
                   </div>
                 </div>
               ))}

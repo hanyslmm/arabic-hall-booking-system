@@ -145,7 +145,7 @@ export const Navbar = ({
   return (
     <>
 {/* Fixed Burger Menu Button - visible only on small screens */}
-<div className="fixed top-4 right-4 z-30 lg:right-6 lg:hidden flex items-center gap-2">
+<div className="fixed top-4 right-4 z-50 lg:right-6 lg:hidden flex items-center gap-2">
   <Button
     variant="default"
     size="sm"
@@ -164,9 +164,6 @@ export const Navbar = ({
   >
     <LogOut className="h-4 w-4" />
   </Button>
-</div>
-<div className="fixed top-4 left-4 z-30 lg:hidden">
-  <div className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-bold text-base">Science Club</div>
 </div>
 
       {sidebarOpen && (
@@ -299,7 +296,7 @@ export const Navbar = ({
       <nav className="border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center space-x-4 space-x-reverse">
-            <h1 className="hidden lg:block text-lg sm:text-xl font-bold text-primary">Science Club</h1>
+            <h1 className="text-base sm:text-lg lg:text-xl font-bold text-primary">Science Club</h1>
           </div>
           <div className="flex items-center gap-2">
             <NotificationBell />
