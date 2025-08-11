@@ -44,6 +44,7 @@ export const AddTeacherModal = ({ isOpen, onClose }: AddTeacherModalProps) => {
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
 
   const form = useForm<TeacherFormData>({
     resolver: zodResolver(teacherSchema),
@@ -98,6 +99,11 @@ export const AddTeacherModal = ({ isOpen, onClose }: AddTeacherModalProps) => {
         teacherData.subject_id = data.subject_id;
       }
       
+      // Real-time validation guard: don't submit if phone duplicate still set
+      if (form.formState.errors.mobile_phone) {
+        throw new Error('duplicate_phone');
+      }
+
       const teacher = await addTeacher(teacherData);
 
       // If academic stages are selected and teacher was created successfully, save them
@@ -166,6 +172,29 @@ export const AddTeacherModal = ({ isOpen, onClose }: AddTeacherModalProps) => {
     form.setValue('academic_stage_ids', updatedStages);
   };
 
+  const checkTeacherPhoneDuplicate = async (phone: string) => {
+    if (!phone.trim()) return false;
+    const { count, error } = await supabase
+      .from('teachers')
+      .select('*', { count: 'exact', head: true })
+      .eq('mobile_phone', phone.trim());
+    if (error) return false;
+    return (count || 0) > 0;
+  };
+
+  const onBlurPhone = async () => {
+    const phone = form.getValues('mobile_phone') || '';
+    if (!phone) return;
+    setIsCheckingPhone(true);
+    const exists = await checkTeacherPhoneDuplicate(phone);
+    setIsCheckingPhone(false);
+    if (exists) {
+      form.setError('mobile_phone', { message: 'رقم الهاتف مستخدم من قبل معلم آخر' });
+    } else {
+      form.clearErrors('mobile_phone');
+    }
+  };
+
   const onSubmit = (data: TeacherFormData) => {
     createTeacherMutation.mutate(data);
   };
@@ -195,7 +224,15 @@ export const AddTeacherModal = ({ isOpen, onClose }: AddTeacherModalProps) => {
               id="mobile_phone"
               placeholder="أدخل رقم الهاتف المحمول"
               {...form.register('mobile_phone')}
+              onBlur={onBlurPhone}
+              aria-invalid={!!form.formState.errors.mobile_phone}
             />
+            {isCheckingPhone && (
+              <p className="text-xs text-muted-foreground">جاري التحقق من الرقم...</p>
+            )}
+            {form.formState.errors.mobile_phone && (
+              <p className="text-sm text-red-500">{form.formState.errors.mobile_phone.message as string}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -221,6 +258,8 @@ export const AddTeacherModal = ({ isOpen, onClose }: AddTeacherModalProps) => {
                 variant="outline"
                 size="icon"
                 onClick={() => setShowAddSubject(true)}
+                aria-label="إضافة مادة"
+                title="إضافة مادة"
               >
                 <Plus className="h-4 w-4" />
               </Button>

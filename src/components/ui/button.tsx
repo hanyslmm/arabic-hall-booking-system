@@ -49,14 +49,27 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, children, title, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+
+    const isIconSize = size === 'icon' || size === 'icon-sm' || size === 'icon-lg'
+
+    // Extract potential aria-label to avoid overriding when spreading props
+    const { ["aria-label"]: ariaLabelProp, ...rest } = props as any
+
+    // Infer label from title or string children
+    const inferred = ariaLabelProp ?? (typeof children === 'string' ? children : title)
+    const finalAriaLabel = isIconSize ? inferred : ariaLabelProp
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        {...props}
-      />
+        aria-label={finalAriaLabel}
+        {...rest}
+      >
+        {children}
+      </Comp>
     )
   }
 )

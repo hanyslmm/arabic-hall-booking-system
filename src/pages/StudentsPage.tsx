@@ -364,6 +364,7 @@ const StudentsPage = () => {
           isLoading={isLoading || isFetching}
           emptyMessage="لا توجد طلاب مسجلين"
           emptyIcon={<Users className="h-12 w-12 text-muted-foreground mx-auto" />}
+          emptyAction={canManageStudents ? { label: 'إضافة طالب جديد', onClick: () => setShowAddStudent(true), icon: <Plus className="h-4 w-4 mr-2" /> } : undefined}
           getRowKey={(student) => student.id}
           expandedContent={renderExpandedStudentContent}
           itemsPerPage={PAGE_SIZE}

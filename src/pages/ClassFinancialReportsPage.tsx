@@ -7,6 +7,8 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { DollarSign, TrendingUp, Users, PieChart } from 'lucide-react';
 import { studentRegistrationsApi } from '@/api/students';
 import { useAuth } from '@/hooks/useAuth';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 export default function ClassFinancialReportsPage() {
   const { profile, isAdmin } = useAuth();
@@ -53,6 +55,13 @@ export default function ClassFinancialReportsPage() {
   }, {}) || {};
 
   const classData = Object.values(classSummary);
+
+  // Prepare chart data
+  const barData = classData.map((c: any) => ({
+    name: c.className,
+    paid: c.totalPaid,
+    remaining: Math.max(0, c.totalFees - c.totalPaid),
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -133,7 +142,33 @@ export default function ClassFinancialReportsPage() {
             <CardTitle>التقرير المالي حسب المجموعة</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            {/* Stacked Bar Chart */}
+            {barData.length > 0 ? (
+              <ChartContainer
+                config={{
+                  paid: { label: 'المحصل', color: 'hsl(var(--chart-2))' },
+                  remaining: { label: 'المتبقي', color: 'hsl(var(--chart-1))' },
+                }}
+                className="h-80 w-full"
+              >
+                <BarChart data={barData} margin={{ left: 8, right: 8, top: 10, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={-15} height={60} />
+                  <YAxis tickFormatter={(v) => v.toLocaleString()} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Bar dataKey="paid" stackId="a" fill="var(--color-paid)" radius={[4,4,0,0]} />
+                  <Bar dataKey="remaining" stackId="a" fill="var(--color-remaining)" radius={[4,4,0,0]} />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">لا توجد بيانات مالية متاحة</p>
+              </div>
+            )}
+
+            {/* Per-class details */}
+            <div className="space-y-4 mt-8">
               {classData.map((classInfo: any, index) => {
                 const collectionRate = classInfo.totalFees > 0 ? (classInfo.totalPaid / classInfo.totalFees) * 100 : 0;
                 const remaining = classInfo.totalFees - classInfo.totalPaid;

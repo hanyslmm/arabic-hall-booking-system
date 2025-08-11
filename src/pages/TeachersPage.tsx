@@ -377,6 +377,7 @@ const TeachersPage = () => {
           isLoading={isLoading}
           emptyMessage="لم يتم إضافة أي معلمين بعد"
           emptyIcon={<GraduationCap className="h-16 w-16 mx-auto text-muted-foreground" />}
+          emptyAction={canManage ? { label: 'إضافة معلم جديد', onClick: () => setShowAddTeacher(true), icon: <Plus className="h-4 w-4 mr-2" /> } : undefined}
           getRowKey={(teacher) => teacher.id}
           expandedContent={renderExpandedTeacherContent}
           itemsPerPage={50}

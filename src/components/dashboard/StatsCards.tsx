@@ -6,6 +6,8 @@ import { Users, Calendar, GraduationCap, Building, Activity, TrendingUp } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { RadialBarChart, RadialBar, AreaChart, Area } from "recharts";
 
 interface StatsCardsProps {
   averageOccupancy?: number;
@@ -88,6 +90,19 @@ export const StatsCards = ({
 
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear();
 
+  // Prepare mini chart data
+  const occupancyValue = typeof stats?.occupancyRatio === 'number' ? stats.occupancyRatio : averageOccupancy;
+  const occupancyChartData = [{ name: 'Occupancy', value: Math.max(0, Math.min(100, occupancyValue)) }];
+
+  // Generate a simple weekly breakdown from monthly earnings for visualization only
+  const weeklyEarnings = Number(monthlyEarnings || 0);
+  const earningsChartData = [
+    { name: 'W1', value: Math.round(weeklyEarnings * 0.22) },
+    { name: 'W2', value: Math.round(weeklyEarnings * 0.28) },
+    { name: 'W3', value: Math.round(weeklyEarnings * 0.25) },
+    { name: 'W4', value: Math.round(weeklyEarnings * 0.25) },
+  ];
+
   const statsData = [
     {
       title: "إجمالي القاعات",
@@ -119,17 +134,19 @@ export const StatsCards = ({
     },
     {
       title: "نسبة الاشغال",
-      value: `${averageOccupancy}%`,
+      value: `${occupancyValue}%`,
       icon: Activity,
       color: "text-orange-600",
-      onClick: () => navigate('/halls')
+      onClick: () => navigate('/halls'),
+      _showRadial: true as const,
     },
     {
       title: isCurrentMonth ? "إيرادات هذا الشهر" : `إيرادات ${getMonthName(selectedMonth)} ${selectedYear}`,
       value: `${Number(monthlyEarnings || 0).toLocaleString()} LE`,
       icon: TrendingUp,
       color: "text-green-600",
-      onClick: () => navigate('/reports')
+      onClick: () => navigate('/reports'),
+      _showArea: true as const,
     },
     {
       title: "إشغال الفترات الزمنية",
@@ -160,6 +177,34 @@ export const StatsCards = ({
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="text-2xl font-bold">{stat.value}</div>
+            )}
+            {(!isLoading && (stat as any)._showRadial) && (
+              <ChartContainer
+                config={{ value: { label: 'النسبة', color: 'hsl(var(--chart-1))' } }}
+                className="mt-3 h-20"
+              >
+                <RadialBarChart data={occupancyChartData} innerRadius={30} outerRadius={38} startAngle={90} endAngle={-270}>
+                  <RadialBar dataKey="value" fill="var(--color-value)" cornerRadius={5} />
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                </RadialBarChart>
+              </ChartContainer>
+            )}
+            {(!isLoading && (stat as any)._showArea) && (
+              <ChartContainer
+                config={{ value: { label: 'الإيراد', color: 'hsl(var(--chart-2))' } }}
+                className="mt-3 h-20"
+              >
+                <AreaChart data={earningsChartData} margin={{ left: 0, right: 0, top: 5, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="earningsGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="value" stroke="var(--color-value)" fill="url(#earningsGradient)" strokeWidth={2} />
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                </AreaChart>
+              </ChartContainer>
             )}
             <p className="text-xs text-muted-foreground mt-1">
               {stat.description || "انقر للعرض التفصيلي"}

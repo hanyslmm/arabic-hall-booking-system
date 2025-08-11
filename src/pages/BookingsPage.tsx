@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, Clock, MapPin, Filter, Hash, Edit, Trash2, AlertCircle, Wifi, WifiOff } from "lucide-react";
+import { Calendar, Users, Clock, MapPin, Filter, Hash, Edit, Trash2, AlertCircle, Wifi, WifiOff, Plus } from "lucide-react";
 import { formatTimeAmPm, formatShortArabicDate } from "@/utils/dateUtils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -680,6 +680,7 @@ const BookingsPage = () => {
             isLoading={isLoading}
             emptyMessage="لم يتم إنشاء أي مجموعات بعد"
             emptyIcon={<Users className="h-16 w-16 mx-auto text-muted-foreground" />}
+            emptyAction={(profile?.user_role === 'owner' || profile?.user_role === 'manager' || isAdmin) ? { label: 'إنشاء مجموعة جديدة', onClick: () => navigate('/class-management'), icon: <Plus className="h-4 w-4 mr-2" /> } : undefined}
             getRowKey={(booking) => booking.id}
             expandedContent={renderExpandedBookingContent}
             itemsPerPage={50}

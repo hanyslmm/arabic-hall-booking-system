@@ -15,6 +15,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/usePagination';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { TableSkeleton } from '@/components/common/LoadingSpinner';
 
 export interface TableColumn<T> {
   key: string;
@@ -42,6 +43,7 @@ interface MobileResponsiveTableProps<T> {
   isLoading?: boolean;
   emptyMessage?: string;
   emptyIcon?: React.ReactNode;
+  emptyAction?: { label: string; onClick: () => void; icon?: React.ReactNode };
   getRowKey: (item: T) => string;
   expandedContent?: (item: T) => React.ReactNode;
   itemsPerPage?: number;
@@ -61,6 +63,7 @@ export function MobileResponsiveTable<T>({
   isLoading,
   emptyMessage = "لا توجد بيانات",
   emptyIcon,
+  emptyAction,
   getRowKey,
   expandedContent,
   itemsPerPage = 10,
@@ -218,144 +221,104 @@ export function MobileResponsiveTable<T>({
   const renderMobileCards = () => {
     return (
       <div className="space-y-4">
+        {/* Render each item as collapsible card on mobile */}
         {currentData.map((item) => {
           const rowKey = getRowKey(item);
           const isExpanded = expandedRows.has(rowKey);
-          
           return (
-            <Card key={rowKey} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  {columns.filter(col => !col.hideOnMobile).map((column) => (
-                    <div key={column.key} className="flex justify-between items-start gap-2">
-                      <span className="text-sm font-medium text-muted-foreground min-w-0 flex-shrink-0">
-                        {column.mobileLabel || column.header}:
-                      </span>
-                      <div className="text-sm text-right min-w-0 flex-1">
-                        {column.render(item)}
-                      </div>
+            <div key={rowKey} className="border rounded-md overflow-hidden">
+              <div className="flex items-center justify-between p-3 bg-muted/40">
+                <div className="grid gap-1">
+                  {/* Show first two columns as summary */}
+                  <div className="text-sm font-medium">{columns[0]?.render(item)}</div>
+                  {columns[1] && (
+                    <div className="text-xs text-muted-foreground">{columns[1].render(item)}</div>
+                  )}
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => toggleRowExpansion(rowKey)} aria-label={isExpanded ? 'إغلاق التفاصيل' : 'عرض التفاصيل'}>
+                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </div>
+              {/* Expanded Content */}
+              {isExpanded && (
+                <div className="p-3 space-y-2">
+                  {columns.slice(2).map((col) => (
+                    <div key={col.key} className="text-sm">
+                      {col.mobileLabel && (
+                        <span className="text-muted-foreground">{col.mobileLabel}: </span>
+                      )}
+                      {col.render(item)}
                     </div>
                   ))}
-                  
-                  {/* Actions */}
                   {actions && actions.length > 0 && (
-                    <div className="pt-3 border-t">
-                      <div className="flex flex-wrap gap-2">
-                        {actions.map((action, index) => (
-                          <Button
-                            key={index}
-                            variant={action.variant || 'outline'}
-                            size="sm"
-                            onClick={() => action.onClick(item)}
-                            className={cn("flex items-center gap-1", action.className)}
-                          >
-                            {action.icon}
-                            {action.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Expand/Collapse for additional content */}
-                  {expandedContent && (
-                    <div className="pt-3 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleRowExpansion(rowKey)}
-                        className="w-full justify-center"
-                      >
-                        {isExpanded ? (
-                          <>
-                            <ChevronDown className="h-4 w-4 mr-2" />
-                            إخفاء التفاصيل
-                          </>
-                        ) : (
-                          <>
-                            <ChevronRight className="h-4 w-4 mr-2" />
-                            عرض التفاصيل
-                          </>
-                        )}
-                      </Button>
+                    <div className="pt-2 flex gap-2 flex-wrap">
+                      {actions.map((action) => (
+                        <Button key={action.label} size={action.size || 'sm'} variant={action.variant || 'outline'} onClick={() => action.onClick(item)} aria-label={action.label}>
+                          {action.icon}
+                          <span className="sr-only sm:not-sr-only">{action.label}</span>
+                        </Button>
+                      ))}
                     </div>
                   )}
                 </div>
-
-                {/* Expanded content */}
-                {expandedContent && isExpanded && (
-                  <div className="mt-4 pt-4 border-t bg-muted/20 -mx-4 px-4">
-                    {expandedContent(item)}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              )}
+            </div>
           );
         })}
       </div>
     );
   };
 
-  // Desktop table view
   const renderDesktopTable = () => {
     return (
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              {expandedContent && <TableHead className="w-12"></TableHead>}
-              {columns.map((column) => (
-                <TableHead key={column.key} className={cn("text-right", column.className)}>
-                  {column.header}
-                </TableHead>
+              {/* Expand column for mobile parity */}
+              <TableHead className="w-[40px]">#</TableHead>
+              {columns.map((col) => (
+                <TableHead key={col.key} className={col.className}>{col.header}</TableHead>
               ))}
-              {actions && actions.length > 0 && (
-                <TableHead className="text-right">الإجراءات</TableHead>
-              )}
+              {actions && <TableHead className="w-1/5">الإجراءات</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {currentData.map((item) => {
               const rowKey = getRowKey(item);
               const isExpanded = expandedRows.has(rowKey);
-              
               return (
                 <React.Fragment key={rowKey}>
                   <TableRow>
-                    {expandedContent && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleRowExpansion(rowKey)}
-                          className="p-0 h-8 w-8"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    )}
-                    {columns.map((column) => (
-                      <TableCell key={column.key} className={column.className}>
-                        {column.render(item)}
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => toggleRowExpansion(rowKey)}
+                        aria-label={isExpanded ? 'إغلاق التفاصيل' : 'عرض التفاصيل'}
+                      >
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                    </TableCell>
+                    {columns.map((col) => (
+                      <TableCell key={col.key} className={col.className}>
+                        {col.render(item)}
                       </TableCell>
                     ))}
-                    {actions && actions.length > 0 && (
+                    {actions && (
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {actions.map((action, index) => (
+                        <div className="flex gap-2 flex-wrap">
+                          {actions.map((action) => (
                             <Button
-                              key={index}
+                              key={action.label}
                               variant={action.variant || 'outline'}
                               size={action.size || 'sm'}
                               onClick={() => action.onClick(item)}
-                              className={cn("flex items-center gap-1", action.className)}
+                              aria-label={action.label}
+                              className={action.className}
                             >
                               {action.icon}
-                              {action.label}
+                              <span className="sr-only sm:not-sr-only">{action.label}</span>
                             </Button>
                           ))}
                         </div>
@@ -390,9 +353,7 @@ export function MobileResponsiveTable<T>({
           </CardHeader>
         )}
         <CardContent>
-          <div className="text-center py-8">
-            <p>جاري التحميل...</p>
-          </div>
+          <TableSkeleton rows={8} columns={(columns?.length || 0) + (actions ? 1 : 0) + 1} />
         </CardContent>
       </Card>
     );
@@ -414,9 +375,15 @@ export function MobileResponsiveTable<T>({
       )}
       <CardContent>
         {currentData.length === 0 ? (
-          <div className="text-center py-8">
-            {emptyIcon && <div className="mb-4">{emptyIcon}</div>}
+          <div className="text-center py-8 space-y-4">
+            {emptyIcon && <div className="mb-2">{emptyIcon}</div>}
             <p className="text-muted-foreground">{emptyMessage}</p>
+            {emptyAction && (
+              <Button onClick={emptyAction.onClick} className="mx-auto" aria-label={emptyAction.label}>
+                {emptyAction.icon}
+                {emptyAction.label}
+              </Button>
+            )}
           </div>
         ) : (
           <>
