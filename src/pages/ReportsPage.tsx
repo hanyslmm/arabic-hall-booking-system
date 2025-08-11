@@ -13,6 +13,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo } from "react";
+import { fetchMonthlyEarnings } from "@/utils/finance";
 
 interface BookingFinancialData {
   id: string;
@@ -22,13 +23,6 @@ interface BookingFinancialData {
   halls: { name: string } | null;
   teachers: { name: string } | null;
   created_at: string;
-}
-
-interface DashboardStats {
-  totalBookings: number;
-  activeBookings: number;
-  totalTeachers: number;
-  totalHalls: number;
 }
 
 export function ReportsPage() {
@@ -55,33 +49,26 @@ export function ReportsPage() {
     return <Navigate to="/" replace />;
   }
 
-  // Fetch dashboard statistics
-  const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats', user?.id],
-    queryFn: async () => {
-      const [bookingsRes, teachersRes, hallsRes] = await Promise.all([
-        supabase.from('bookings').select('id, status'),
-        supabase.from('teachers').select('id'),
-        supabase.from('halls').select('id')
-      ]);
+  // Current month date range for filtering and totals
+  const { startDate, endDateExclusive } = useMemo(() => {
+    const now = new Date();
+    return {
+      startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+      endDateExclusive: new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    };
+  }, []);
 
-      const totalBookings = bookingsRes.data?.length || 0;
-      const activeBookings = bookingsRes.data?.filter(b => b.status === 'active').length || 0;
-      const totalTeachers = teachersRes.data?.length || 0;
-      const totalHalls = hallsRes.data?.length || 0;
+  const isInCurrentMonth = useMemo(() => {
+    const start = startDate.getTime();
+    const end = endDateExclusive.getTime();
+    return (dateString?: string | null) => {
+      if (!dateString) return false;
+      const t = new Date(dateString).getTime();
+      return t >= start && t < end;
+    };
+  }, [startDate, endDateExclusive]);
 
-      return {
-        totalBookings,
-        activeBookings,
-        totalTeachers,
-        totalHalls
-      } as DashboardStats;
-    },
-    enabled: !!user,
-    staleTime: 30_000,
-  });
-
-  // Fetch all bookings with financial data
+  // Fetch all bookings with basic data for filters and table
   const reportsQuery = useQuery({
     queryKey: ['bookings-report', user?.id],
     queryFn: async () => {
@@ -108,20 +95,6 @@ export function ReportsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch registrations with payment records to compute collected amounts
-  const { data: registrations } = useQuery({
-    queryKey: ['registrations-with-payments', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('student_registrations')
-        .select('id, booking_id, total_fees, payment_records(amount, payment_date)');
-      if (error) throw error;
-      return data as Array<{ id: string; booking_id: string; total_fees: number; payment_records: Array<{ amount: number; payment_date: string }>; }>;
-    },
-    enabled: !!user,
-    staleTime: 30_000,
-  });
-
   // Apply filters to bookings
   const filteredBookings = useMemo(() => {
     let items = reportsQuery.data || [];
@@ -134,23 +107,46 @@ export function ReportsPage() {
     return items;
   }, [reportsQuery.data, selectedTeacher, selectedBooking]);
 
-  // Build payment sum per booking and totals
-  const { totalCollected, averageBookingValue, perBookingCollected, expectedTotalFees } = useMemo(() => {
-    const bookingIds = new Set((filteredBookings || []).map(b => b.id));
+  const filteredBookingIds = useMemo(() => (filteredBookings || []).map((b: any) => b.id), [filteredBookings]);
+
+  // Fetch registrations with payment records only for filtered bookings
+  const { data: registrations } = useQuery({
+    queryKey: ['registrations-with-payments', user?.id, filteredBookingIds],
+    queryFn: async () => {
+      if (!filteredBookingIds || filteredBookingIds.length === 0) return [] as Array<{ id: string; booking_id: string; total_fees: number; payment_records: Array<{ amount: number; payment_date: string }>; }>;
+      const { data, error } = await supabase
+        .from('student_registrations')
+        .select('id, booking_id, total_fees, payment_records(amount, payment_date)')
+        .in('booking_id', filteredBookingIds);
+      if (error) throw error;
+      return data as Array<{ id: string; booking_id: string; total_fees: number; payment_records: Array<{ amount: number; payment_date: string }>; }>;
+    },
+    enabled: !!user && filteredBookingIds.length > 0,
+    staleTime: 30_000,
+  });
+
+  // Server-side monthly total using RPC through util (matches home page logic)
+  const { data: monthlyCollected = 0, isLoading: isLoadingMonthlyTotal } = useQuery({
+    queryKey: ['monthly-collected-total'],
+    queryFn: () => fetchMonthlyEarnings(),
+  });
+
+  // Build payment sum per booking, limited to current month
+  const { averageBookingValue, perBookingCollected } = useMemo(() => {
     const perBooking = new Map<string, number>();
-    let total = 0;
-    let expected = 0;
     for (const reg of registrations || []) {
-      if (!bookingIds.has(reg.booking_id)) continue;
-      const collectedForReg = (reg.payment_records || []).reduce((s, r) => s + Number(r.amount || 0), 0);
-      total += collectedForReg;
-      expected += Number(reg.total_fees || 0);
-      perBooking.set(reg.booking_id, (perBooking.get(reg.booking_id) || 0) + collectedForReg);
+      const collectedForRegThisMonth = (reg.payment_records || [])
+        .filter((r) => isInCurrentMonth(r.payment_date))
+        .reduce((s, r) => s + Number(r.amount || 0), 0);
+      if (collectedForRegThisMonth > 0) {
+        perBooking.set(reg.booking_id, (perBooking.get(reg.booking_id) || 0) + collectedForRegThisMonth);
+      }
     }
     const count = filteredBookings?.length || 0;
+    const total = Array.from(perBooking.values()).reduce((a, b) => a + b, 0);
     const avg = count > 0 ? Math.round(total / count) : 0;
-    return { totalCollected: total, averageBookingValue: avg, perBookingCollected: perBooking, expectedTotalFees: expected };
-  }, [registrations, filteredBookings]);
+    return { averageBookingValue: avg, perBookingCollected: perBooking };
+  }, [registrations, filteredBookings, isInCurrentMonth]);
 
 
   if (reportsQuery.isLoading) {
@@ -210,7 +206,7 @@ export function ReportsPage() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    // Export CSV of filtered data with per-booking collected
+                    // Export CSV of filtered data with per-booking collected (current month)
                     const rows = (filteredBookings || []).map(b => {
                       const collected = perBookingCollected.get(b.id) || 0;
                       return {
@@ -247,10 +243,10 @@ export function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {Number(totalCollected || 0).toLocaleString()} جنيه
+                {isLoadingMonthlyTotal ? '...' : Number(monthlyCollected || 0).toLocaleString()} جنيه
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                من جميع الحجوزات
+                هذا الشهر
               </p>
             </CardContent>
           </Card>
@@ -278,7 +274,7 @@ export function ReportsPage() {
                 {averageBookingValue.toLocaleString()} جنيه
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                للحجز الواحد
+                هذا الشهر
               </p>
             </CardContent>
           </Card>
@@ -301,7 +297,7 @@ export function ReportsPage() {
                     <TableHead>المعلم</TableHead>
                     <TableHead>الكود</TableHead>
                     <TableHead>عدد الطلاب</TableHead>
-                    <TableHead>المحصل</TableHead>
+                    <TableHead>المحصل (هذا الشهر)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -20,6 +20,7 @@ import { studentRegistrationsApi, paymentsApi } from '@/api/students';
 import { studentsApi } from '@/api/students';
 import { BulkUploadModal } from '@/components/student/BulkUploadModal';
 import { format } from 'date-fns';
+import { Progress } from '@/components/ui/progress';
 
 interface AttendanceRecord {
   student_registration_id: string;
@@ -306,6 +307,22 @@ export default function ClassManagementPage() {
     return matchesSearch && matchesStatus;
   }) || [];
 
+  // Payment summary counts and rate for current class (period = current month by default)
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const isInCurrentMonth = (dateString?: string | null) => {
+    if (!dateString) return false;
+    const d = new Date(dateString);
+    return d >= monthStart && d < monthEnd;
+  };
+
+  const totalStudents = registrations?.length || 0;
+  const paidStudentsThisMonth = (registrations || []).filter(reg =>
+    (reg as any).payment_records ? (reg as any).payment_records.some((pr: any) => isInCurrentMonth(pr.payment_date)) : (reg.paid_amount || 0) >= (reg.total_fees || 0)
+  ).length;
+  const paymentRate = totalStudents > 0 ? Math.round((paidStudentsThisMonth / totalStudents) * 100) : 0;
+
   if (isLoadingBooking || isLoadingRegistrations) {
     return (
       <UnifiedLayout>
@@ -347,6 +364,35 @@ export default function ClassManagementPage() {
           </Button>
           <h1 className="text-3xl font-bold">إدارة المجموعة</h1>
         </div>
+
+        {/* Payment Status Summary */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              ملخص حالة الدفع لهذا الشهر
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+              <div>
+                <div className="text-sm text-muted-foreground">إجمالي الطلاب</div>
+                <div className="text-2xl font-bold">{totalStudents}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">عدد المدفوعين هذا الشهر</div>
+                <div className="text-2xl font-bold text-green-600">{paidStudentsThisMonth}</div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-muted-foreground">نسبة الدفع</span>
+                  <span className="font-semibold">{paymentRate}%</span>
+                </div>
+                <Progress value={paymentRate} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Class Information */}
         <Card className="mb-6">
@@ -402,7 +448,7 @@ export default function ClassManagementPage() {
         {/* Financial Summary - Removed "المتبقي" */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items_center gap-2">
               <DollarSign className="h-5 w-5" />
               الملخص المالي
             </CardTitle>

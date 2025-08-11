@@ -210,7 +210,8 @@ export const studentRegistrationsApi = {
       .from("student_registrations")
       .select(`
         *,
-        student:students(*)
+        student:students(*),
+        payment_records(amount, payment_date)
       `)
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false });
