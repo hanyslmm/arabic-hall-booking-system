@@ -149,6 +149,26 @@ export const studentsApi = {
     return data as Student[];
   },
 
+  async searchBySerialExact(term: string): Promise<Student[]> {
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("serial_number", term)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data as Student[]) || [];
+  },
+
+  async searchFlexible(term: string): Promise<Student[]> {
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .or(`serial_number.ilike.%${term}%,name.ilike.%${term}%,mobile_phone.ilike.%${term}%`)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data as Student[]) || [];
+  },
+  
   async getById(id: string): Promise<Student | null> {
     const { data, error } = await supabase
       .from("students")

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Loader2, Scan, DollarSign, Calendar, Users, Camera, X, CreditCard } from "lucide-react";
 import { BarcodeScanner } from "@alzera/react-scanner";
 import { formatTimeAmPm } from "@/utils/dateUtils";
+import { attendanceApi } from "@/api/students";
 
 interface FastRegistrationModalProps {
   isOpen: boolean;
@@ -57,11 +58,25 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
   const [isRegistering, setIsRegistering] = useState(false);
   const [autoRegisterMode, setAutoRegisterMode] = useState(false);
   const [registerAllClasses, setRegisterAllClasses] = useState(false);
+  const [flexibleSearch, setFlexibleSearch] = useState(false);
+  const [ultraFastMode, setUltraFastMode] = useState(false);
+  const [ultraResults, setUltraResults] = useState<Array<{
+    id: string;
+    hall?: string;
+    teacher?: string;
+    start_time?: string;
+    fees: number;
+    attendanceMarked: boolean;
+    paymentCreated: boolean;
+  }>>([]);
 
   // Get today's weekday to filter relevant classes
   const today = new Date();
   const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const todayWeekday = weekdays[today.getDay()];
+
+  // Today ISO string for attendance and payment
+  const todayISO = new Date().toISOString().split('T')[0];
 
   // Fetch today's active bookings
   const { data: todaysBookings = [] } = useQuery({
@@ -111,15 +126,26 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
   });
 
   const searchMutation = useMutation({
-    mutationFn: studentsApi.search,
+    mutationFn: async (term: string) => {
+      if (flexibleSearch) {
+        return await studentsApi.searchFlexible(term);
+      }
+      // default: exact serial match
+      return await studentsApi.searchBySerialExact(term);
+    },
     onSuccess: (students) => {
+      if (!flexibleSearch && students.length > 1) {
+        // exact serial should return max 1; if multiple due to data issue, take exact equality first
+        const exact = students.find((s) => s.serial_number === barcodeInput.trim());
+        if (exact) students = [exact];
+      }
       if (students.length === 1) {
         setSelectedStudent(students[0]);
-        setScannerActive(false); // Close camera after finding student
-        // Clear any previous selections since we're showing registered classes only
+        setScannerActive(false);
         setSelectedClasses({});
         setTotalAmount(0);
         setPaymentAmount("0");
+        setUltraResults([]);
       } else if (students.length === 0) {
         toast.error("لم يتم العثور على الطالب");
       }
@@ -205,17 +231,23 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
   });
 
   // Handle barcode scan
-  const handleBarcodeScan = (result: string) => {
+  const handleBarcodeScan = async (result: string) => {
     setBarcodeInput(result);
     if (result.trim()) {
-      searchMutation.mutate(result.trim());
+      await searchMutation.mutateAsync(result.trim());
+      if (ultraFastMode) {
+        await handleUltraFastProcess();
+      }
     }
   };
 
   // Handle manual barcode input
-  const handleBarcodeSubmit = () => {
+  const handleBarcodeSubmit = async () => {
     if (barcodeInput.trim()) {
-      searchMutation.mutate(barcodeInput.trim());
+      await searchMutation.mutateAsync(barcodeInput.trim());
+      if (ultraFastMode) {
+        await handleUltraFastProcess();
+      }
     }
   };
 
@@ -414,6 +446,78 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
     }
   };
 
+  // Ultra-Fast processing: mark attendance for all today's classes and create payment if not paid this month
+  const handleUltraFastProcess = async () => {
+    if (!selectedStudent) return;
+    // Determine registrations of student and filter to today's classes
+    const { data, error } = await supabase
+      .from("student_registrations")
+      .select(`
+        id,
+        total_fees,
+        payment_status,
+        booking:bookings(days_of_week, start_time, halls(name), teachers(name)),
+        payment_records(amount, payment_date)
+      `)
+      .eq("student_id", selectedStudent.id);
+    if (error) {
+      toast.error("فشل في جلب تسجيلات الطالب");
+      return;
+    }
+    const regs = (data || []).filter((r: any) => (r.booking?.days_of_week || []).includes(todayWeekday));
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const results: Array<{
+      id: string;
+      hall?: string;
+      teacher?: string;
+      start_time?: string;
+      fees: number;
+      attendanceMarked: boolean;
+      paymentCreated: boolean;
+    }> = [];
+    for (const r of regs) {
+      let attendanceMarked = false;
+      let paymentCreated = false;
+      try {
+        await attendanceApi.markPresentForDate(r.id, todayISO);
+        attendanceMarked = true;
+      } catch (_) {}
+      try {
+        // Check if any payment exists in the current month
+        const paidThisMonth = (r as any).payment_records?.some((p: any) => {
+          const d = new Date(p.payment_date);
+          return d >= monthStart && d < monthEnd;
+        });
+        if (!paidThisMonth) {
+          const amount = Number(r.total_fees || 0);
+          if (amount > 0) {
+            await paymentsApi.create({
+              student_registration_id: r.id,
+              amount,
+              payment_date: todayISO,
+              payment_method: 'cash',
+              notes: 'Ultra-Fast auto payment'
+            });
+            paymentCreated = true;
+          }
+        }
+      } catch (_) {}
+      results.push({
+        id: r.id,
+        hall: r.booking?.halls?.name,
+        teacher: r.booking?.teachers?.name,
+        start_time: r.booking?.start_time,
+        fees: Number(r.total_fees || 0),
+        attendanceMarked,
+        paymentCreated,
+      });
+    }
+    setUltraResults(results);
+    // Keep data on screen for review: fetch existing registrations to hide available class list and show student info
+    toast.success("تم تسجيل الحضور والدفع تلقائياً");
+  };
+
   const handleClose = () => {
     setBarcodeInput("");
     setSelectedStudent(null);
@@ -422,6 +526,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
     setPaymentAmount("");
     setScannerActive(false);
     setIsRegistering(false);
+    setUltraResults([]);
     searchMutation.reset();
     onClose();
   };
@@ -465,12 +570,22 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
           {/* Compact Barcode Scanner Section */}
           <Card>
             <CardContent className="pt-3 pb-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox id="flex-search" checked={flexibleSearch} onCheckedChange={(v) => setFlexibleSearch(!!v)} />
+                  <Label htmlFor="flex-search" className="text-xs">بحث بالاسم أو الموبايل</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="ultra-fast" checked={ultraFastMode} onCheckedChange={(v) => setUltraFastMode(!!v)} />
+                  <Label htmlFor="ultra-fast" className="text-xs">التسجيل فائق السرعة</Label>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <Input
                   id="barcode"
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder="رقم الطالب أو امسح الباركود"
+                  placeholder={flexibleSearch ? "الاسم/الموبايل/الرقم التسلسلي" : "ابحث بالرقم التسلسلي فقط"}
                   className="text-right"
                   onKeyPress={(e) => e.key === 'Enter' && handleBarcodeSubmit()}
                 />
@@ -528,9 +643,9 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
               {scannerActive && (
                 <div className="border-2 border-dashed border-primary rounded-lg p-2 h-32 bg-background/50">
                   <BarcodeScanner
-                    onScan={(data) => {
+                    onScan={async (data) => {
                       if (data) {
-                        handleBarcodeScan(data);
+                        await handleBarcodeScan(data);
                         // Visual feedback for successful scan
                         const scanArea = document.querySelector('.border-dashed');
                         if (scanArea) {
@@ -572,10 +687,38 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
                       id="register-all"
                       checked={registerAllClasses}
                       onCheckedChange={handleRegisterAllToggle}
+                      disabled={ultraFastMode}
                     />
                     <Label htmlFor="register-all" className="text-xs">تسجيل في جميع الدورات</Label>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ultra-Fast Results */}
+          {ultraFastMode && selectedStudent && ultraResults.length > 0 && (
+            <Card>
+              <CardContent className="p-3 space-y-2">
+                <div className="text-sm font-medium">نتيجة التسجيل فائق السرعة لليوم</div>
+                {ultraResults.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between border rounded-md p-2">
+                    <div className="text-sm">
+                      <div className="font-medium">{r.hall} - {r.teacher}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.start_time ? formatTimeAmPm(r.start_time) : ''} • {r.fees.toFixed(0)} LE
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={r.attendanceMarked ? 'default' : 'secondary'} className="text-xs">
+                        حضور
+                      </Badge>
+                      <Badge variant={r.paymentCreated ? 'default' : 'secondary'} className="text-xs">
+                        دفعة
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
@@ -646,7 +789,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
         </div>
 
         <DialogFooter className="flex gap-2 pt-3">
-          {selectedStudent && selectedClassCount > 0 && (
+          {selectedStudent && selectedClassCount > 0 && !ultraFastMode && (
             <div className="flex items-center gap-2 flex-1">
               <span className="text-sm">الإجمالي: {totalAmount.toFixed(0)} LE</span>
               <Input
@@ -658,14 +801,16 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
               />
             </div>
           )}
-          <Button 
-            type="button" 
-            onClick={handleRegister}
-            disabled={isRegistering || !selectedStudent || selectedClassCount === 0}
-            className="h-8 px-4"
-          >
-            {isRegistering ? "جاري التسجيل..." : `تسجيل (${selectedClassCount})`}
-          </Button>
+          {!ultraFastMode && (
+            <Button 
+              type="button" 
+              onClick={handleRegister}
+              disabled={isRegistering || !selectedStudent || selectedClassCount === 0}
+              className="h-8 px-4"
+            >
+              {isRegistering ? "جاري التسجيل..." : `تسجيل (${selectedClassCount})`}
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={handleClose} className="h-8 px-4">
             إغلاق
           </Button>
