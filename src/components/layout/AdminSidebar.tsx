@@ -273,7 +273,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
       {/* Enhanced Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-80 sm:w-72 transform bg-card/95 backdrop-blur-md border-l shadow-2xl transition-all duration-300 ease-out lg:static lg:translate-x-0 lg:w-72 lg:bg-card lg:shadow-none",
+          "fixed inset-y-0 right-0 z-50 w-80 sm:w-72 transform bg-card/95 backdrop-blur-md border-l shadow-2xl transition-all duration-300 ease-out sm:static sm:translate-x-0 sm:w-72 sm:bg-card sm:shadow-none",
           sidebarOpen ? "translate-x-0 sidebar-enter" : "translate-x-full"
         )}
         style={{ direction: 'rtl' }}

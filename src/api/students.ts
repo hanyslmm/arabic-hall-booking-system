@@ -204,6 +204,8 @@ export const studentsApi = {
   }
 };
 
+export const getStudents = studentsApi.getAll;
+
 // Student Registrations API
 export const studentRegistrationsApi = {
   async getAll(): Promise<StudentRegistration[]> {

@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 
 import { UnifiedLayout } from "@/components/layout/UnifiedLayout";
-import { StatsCards } from "@/components/dashboard/StatsCards";
+import StatsCards from "@/components/dashboard/StatsCards";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { HallsGrid } from "@/components/dashboard/HallsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -114,10 +114,7 @@ const Index = () => {
           onMonthChange={handleMonthChange}
         />
 
-        <StatsCards 
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-        />
+        <StatsCards />
 
         <HallsGrid />
 

@@ -1,13 +1,13 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, Activity } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HallScheduleModal } from "@/components/hall/HallScheduleModal";
 import { useAuth } from "@/hooks/useAuth";
+import { getHalls } from "@/api/halls";
 
 interface Hall {
   id: string;
@@ -30,16 +30,8 @@ export const HallsGrid = ({ occupancyData }: HallsGridProps) => {
   const { user } = useAuth();
 
   const { data: halls, isLoading, error } = useQuery({
-    queryKey: ['halls', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('halls')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data as Hall[];
-    },
+    queryKey: ['halls'],
+    queryFn: getHalls,
     enabled: !!user,
     staleTime: 30_000,
   });
