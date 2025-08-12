@@ -98,7 +98,7 @@ const Index = () => {
   return (
     <UnifiedLayout>
       <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-3xl font-bold">لوحة التحكم</h1>
           {can('create:registrations') && (
             <Button onClick={() => setIsFastReceptionistOpen(true)}>

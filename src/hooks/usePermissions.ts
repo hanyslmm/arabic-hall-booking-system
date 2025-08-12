@@ -2,6 +2,19 @@ import { useMemo } from "react";
 import { UserProfile, AuthPermissions } from "@/types";
 import { USER_ROLES } from "@/lib/constants";
 
+// Role-based fine-grained permissions (for reference/feature flags)
+// Not currently used by hooks below, but kept for centralized permissions mapping
+const rolePermissions = {
+  admin: [
+    'view:reports',
+    'manage:halls',
+    'manage:bookings',
+    'manage:students',
+    'create:registrations',
+    'manage:payments',
+  ],
+} as const;
+
 export const usePermissions = (profile: UserProfile | null): AuthPermissions => {
   return useMemo(() => {
     if (!profile) {
