@@ -2,9 +2,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Prefer environment variables so deployments can target the correct Supabase project
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || "https://lhklufuwbtjexsehlvtj.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxoa2x1ZnV3YnRqZXhzZWhsdnRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1MTcyNTMsImV4cCI6MjA2NTA5MzI1M30.lRp-zyA9I3wwfBE8rT24oYJyzWS3_1QJRztZg-cnFhg";
+// Get environment variables with proper error handling
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+
+// Validate that required environment variables are present
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('Missing required Supabase environment variables. Please check your .env file.');
+  console.error('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
+  throw new Error('Supabase configuration is incomplete. Check environment variables.');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

@@ -33,5 +33,22 @@ export default defineConfig(({ mode }) => ({
   // Additional configuration for deployment environments
   define: {
     global: 'globalThis',
+  },
+  // Build optimization settings
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks for better caching
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          supabase: ['@supabase/supabase-js'],
+          query: ['@tanstack/react-query'],
+          charts: ['recharts'],
+          utils: ['date-fns', 'clsx', 'class-variance-authority']
+        }
+      }
+    }
   }
 }));
