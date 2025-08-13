@@ -6,20 +6,26 @@ import type { Database } from './types';
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 
+// Create a flag to track if Supabase is properly configured
+export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
+
 // Validate that required environment variables are present
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.error('Missing required Supabase environment variables. Please check your .env file.');
-  console.error('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
-  throw new Error('Supabase configuration is incomplete. Check environment variables.');
+if (!isSupabaseConfigured) {
+  console.warn('Missing required Supabase environment variables. Please check your .env file.');
+  console.warn('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
+  console.warn('The application will run in limited mode without authentication.');
 }
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+// Create a dummy client if not configured to prevent crashes
+export const supabase = isSupabaseConfigured 
+  ? createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    })
+  : null as any; // This will be handled by the app with proper error messages

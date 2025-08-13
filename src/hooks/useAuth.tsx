@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { UserProfile, AuthPermissions } from "@/types";
 import { usePermissions } from "./usePermissions";
@@ -18,6 +18,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If Supabase is not configured, immediately set loading to false
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     // Safety timeout in case auth never resolves due to network issues
     const safetyTimeout = window.setTimeout(() => {
       console.warn("Auth loading exceeded expected time. Proceeding without full profile.");

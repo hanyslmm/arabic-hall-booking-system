@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const { toast } = useToast();
@@ -16,12 +18,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const trySignIn = async (emailCandidate: string, pwd: string) => {
+    if (!isSupabaseConfigured) {
+      throw new Error("Database connection not configured. Please contact your administrator.");
+    }
     const { error } = await supabase.auth.signInWithPassword({ email: emailCandidate, password: pwd });
     return error;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isSupabaseConfigured) {
+      toast({
+        title: "Configuration Error",
+        description: "The application is not properly configured. Please contact your administrator.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -105,6 +120,14 @@ export default function LoginPage() {
           </p>
         </CardHeader>
         <CardContent>
+          {!isSupabaseConfigured && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                The application is not properly configured. Please ensure environment variables are set correctly.
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <Input
@@ -114,6 +137,7 @@ export default function LoginPage() {
                 onChange={e => setUsername(e.target.value)}
                 required
                 autoFocus
+                disabled={!isSupabaseConfigured}
               />
             </div>
             <div>
@@ -123,10 +147,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                disabled={!isSupabaseConfigured}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "جاري الدخول..." : "دخول"}
+            <Button type="submit" className="w-full" disabled={loading || !isSupabaseConfigured}>
+              {loading ? "جاري الدخول..." : !isSupabaseConfigured ? "Configuration Required" : "دخول"}
             </Button>
           </form>
         </CardContent>

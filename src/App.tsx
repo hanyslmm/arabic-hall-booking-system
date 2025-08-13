@@ -8,6 +8,8 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { UnifiedLayout } from "@/components/layout/UnifiedLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
+import { ConfigurationCheck } from "@/components/ConfigurationCheck";
 import BookingPage from "./pages/BookingPage";
 import UsersPage from "./pages/UsersPage";
 import TeachersPage from "./pages/TeachersPage";
@@ -121,35 +123,41 @@ function ToastEventListener() {
   return null;
 }
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <ToastEventListener />
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/login" element={<LoginPage />} />
+const App = () => {
+  // Check if Supabase is configured
+  if (!isSupabaseConfigured) {
+    return <ConfigurationCheck />;
+  }
 
-            {/* Protected routes wrapped with UnifiedLayout */}
-            <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-            <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
-            <Route path="/halls" element={<ProtectedRoute><HallsPage /></ProtectedRoute>} />
-            <Route path="/stages" element={<ProtectedRoute><StagesPage /></ProtectedRoute>} />
-            <Route path="/subjects" element={<ProtectedRoute><SubjectsPage /></ProtectedRoute>} />
-            <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
-            <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-            <Route path="/student-registrations" element={<ProtectedRoute><StudentRegistrationsPage /></ProtectedRoute>} />
-            <Route path="/class-management/:bookingId" element={<ProtectedRoute><ClassManagementPage /></ProtectedRoute>} />
-            <Route path="/financial-reports" element={<ProtectedRoute><ClassFinancialReportsPage /></ProtectedRoute>} />
-            <Route path="/admin-privileges" element={<ProtectedRoute><AdminPrivilegesPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-            <Route path="/audit-logs" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
-            <Route path="/diagnostics" element={<ProtectedRoute><DiagnosticsPage /></ProtectedRoute>} />
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <ToastEventListener />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/login" element={<LoginPage />} />
+
+              {/* Protected routes wrapped with UnifiedLayout */}
+              <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
+              <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+              <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
+              <Route path="/halls" element={<ProtectedRoute><HallsPage /></ProtectedRoute>} />
+              <Route path="/stages" element={<ProtectedRoute><StagesPage /></ProtectedRoute>} />
+              <Route path="/subjects" element={<ProtectedRoute><SubjectsPage /></ProtectedRoute>} />
+              <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
+              <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
+              <Route path="/student-registrations" element={<ProtectedRoute><StudentRegistrationsPage /></ProtectedRoute>} />
+              <Route path="/class-management/:bookingId" element={<ProtectedRoute><ClassManagementPage /></ProtectedRoute>} />
+              <Route path="/financial-reports" element={<ProtectedRoute><ClassFinancialReportsPage /></ProtectedRoute>} />
+              <Route path="/admin-privileges" element={<ProtectedRoute><AdminPrivilegesPage /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
+              <Route path="/diagnostics" element={<ProtectedRoute><DiagnosticsPage /></ProtectedRoute>} />
                          <Route path="/style-showcase" element={<ProtectedRoute><UnifiedLayout><StyleShowcase /></UnifiedLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
