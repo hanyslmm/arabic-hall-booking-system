@@ -32,23 +32,6 @@ export function ReportsPage() {
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
   const [selectedBooking, setSelectedBooking] = useState<string>('all');
 
-  if (loading) {
-    return (
-      <UnifiedLayout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner />
-        </div>
-      </UnifiedLayout>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  if (!hasAdminAccess) {
-    return <Navigate to="/" replace />;
-  }
-
   // Current month date range for filtering and totals
   const { startDate, endDateExclusive } = useMemo(() => {
     const now = new Date();
@@ -129,6 +112,7 @@ export function ReportsPage() {
   const { data: monthlyCollected = 0, isLoading: isLoadingMonthlyTotal } = useQuery({
     queryKey: ['monthly-collected-total'],
     queryFn: () => fetchMonthlyEarnings(),
+    enabled: !!user,
   });
 
   // Build payment sum per booking, limited to current month
@@ -148,6 +132,23 @@ export function ReportsPage() {
     return { averageBookingValue: avg, perBookingCollected: perBooking };
   }, [registrations, filteredBookings, isInCurrentMonth]);
 
+  // Auth/role redirects AFTER hooks
+  if (loading) {
+    return (
+      <UnifiedLayout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner />
+        </div>
+      </UnifiedLayout>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!hasAdminAccess) {
+    return <Navigate to="/" replace />;
+  }
 
   if (reportsQuery.isLoading) {
     return (

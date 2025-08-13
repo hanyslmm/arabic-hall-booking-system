@@ -482,7 +482,9 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
       try {
         await attendanceApi.markPresentForDate(r.id, todayISO);
         attendanceMarked = true;
-      } catch (_) {}
+      } catch (err) {
+        console.warn('Failed to mark attendance', err);
+      }
       try {
         // Check if any payment exists in the current month
         const paidThisMonth = (r as any).payment_records?.some((p: any) => {
@@ -502,7 +504,9 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
             paymentCreated = true;
           }
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn('Failed to create payment', err);
+      }
       results.push({
         id: r.id,
         hall: r.booking?.halls?.name,

@@ -98,7 +98,9 @@ export function MobileResponsiveTable<T>({
 
   const goToPage = (page: number) => {
     if (serverSide) {
-      onPageChange && onPageChange(page);
+      if (onPageChange) {
+        onPageChange(page);
+      }
     } else {
       clientGoToPage(page);
     }

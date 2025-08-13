@@ -22,24 +22,34 @@ const TeacherDashboard = () => {
   };
 
   // Get teacher statistics
+  const teacherId = profile?.teacher_id;
   const { data: statistics, isLoading: statsLoading } = useQuery({
-    queryKey: ['teacher-statistics', profile?.teacher_id, selectedMonth, selectedYear],
-    queryFn: () => teacherAuthApi.getStatistics(profile?.teacher_id!),
-    enabled: !!profile?.teacher_id && profile?.user_role === 'teacher'
+    queryKey: ['teacher-statistics', teacherId, selectedMonth, selectedYear],
+    queryFn: async () => {
+      if (!teacherId) throw new Error('Missing teacherId');
+      return teacherAuthApi.getStatistics(teacherId);
+    },
+    enabled: !!teacherId && profile?.user_role === 'teacher'
   });
 
   // Get teacher bookings - now passing teacher_id
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
-    queryKey: ['teacher-bookings', profile?.teacher_id],
-    queryFn: () => teacherAuthApi.getMyBookings(profile?.teacher_id!),
-    enabled: !!profile?.teacher_id && profile?.user_role === 'teacher'
+    queryKey: ['teacher-bookings', teacherId],
+    queryFn: async () => {
+      if (!teacherId) throw new Error('Missing teacherId');
+      return teacherAuthApi.getMyBookings(teacherId);
+    },
+    enabled: !!teacherId && profile?.user_role === 'teacher'
   });
 
   // Get student registrations - now passing teacher_id
   const { data: registrations, isLoading: registrationsLoading } = useQuery({
-    queryKey: ['teacher-registrations', profile?.teacher_id],
-    queryFn: () => teacherAuthApi.getMyStudentRegistrations(profile?.teacher_id!),
-    enabled: !!profile?.teacher_id && profile?.user_role === 'teacher'
+    queryKey: ['teacher-registrations', teacherId],
+    queryFn: async () => {
+      if (!teacherId) throw new Error('Missing teacherId');
+      return teacherAuthApi.getMyStudentRegistrations(teacherId);
+    },
+    enabled: !!teacherId && profile?.user_role === 'teacher'
   });
 
   if (profile?.user_role !== 'teacher') {

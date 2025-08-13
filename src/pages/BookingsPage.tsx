@@ -62,8 +62,8 @@ const BookingsPage = () => {
   const [selectedHall, setSelectedHall] = useState<string>('all');
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
   const [debugInfo, setDebugInfo] = useState<{
-    authState: any;
-    profileState: any;
+    authState: unknown;
+    profileState: unknown;
     connectionState: string;
   } | null>(null);
   const { toast } = useToast();
@@ -101,7 +101,7 @@ const BookingsPage = () => {
         setDebugInfo({
           authState: { error: 'Failed to check auth state' },
           profileState: { error: 'Failed to check profile state' },
-          connectionState: `Connection Failed: ${error}`
+          connectionState: `Connection Failed: ${String(error)}`
         });
       }
     };
@@ -109,18 +109,13 @@ const BookingsPage = () => {
     checkConnectionAndAuth();
   }, [user, profile]);
 
-  // If not authenticated, redirect to login to avoid RLS errors
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
   // Fetch halls for filter
   const { data: halls } = useQuery({
     queryKey: queryKeys.halls(),
     queryFn: async () => {
       const { data, error } = await supabase.from('halls').select('id, name').order('name');
       if (error) throw error;
-      return data;
+      return data as Array<{ id: string; name: string }>;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!user,
@@ -132,7 +127,7 @@ const BookingsPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('teachers').select('id, name').order('name');
       if (error) throw error;
-      return data;
+      return data as Array<{ id: string; name: string }>;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!user,
@@ -192,10 +187,10 @@ const BookingsPage = () => {
       }
 
       // Batch fetch counts per booking to avoid N+1 queries (single source of truth)
-      const bookingIds = bookingsData.map((b: any) => b.id);
+      const bookingIds = (bookingsData as Booking[]).map((b) => b.id);
       const idToCountObj = await studentRegistrationsApi.countByBookingIds(bookingIds);
 
-      const enriched = (bookingsData as any[]).map((booking) => ({
+      const enriched = (bookingsData as Booking[]).map((booking) => ({
         ...booking,
         actual_student_count: idToCountObj[booking.id] ?? 0,
       }));
@@ -207,7 +202,7 @@ const BookingsPage = () => {
     refetchOnWindowFocus: false,
     enabled: !!user,
   });
-
+ 
   // Delete booking mutation
   const deleteMutation = useMutation({
     mutationFn: async (bookingId: string) => {
@@ -232,13 +227,13 @@ const BookingsPage = () => {
       });
     },
   });
-
+ 
   // Memoize expensive calculations
   const canManage = useMemo(() => 
     profile?.user_role === 'owner' || profile?.user_role === 'manager' || isAdmin,
     [profile?.user_role, isAdmin]
   );
-
+ 
   // Loading timeout guard to avoid infinite spinner on flaky connections
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   useEffect(() => {
@@ -248,6 +243,11 @@ const BookingsPage = () => {
     }
     setLoadingTimedOut(false);
   }, [isLoading, isFetching]);
+
+  // If not authenticated, redirect to login to avoid RLS errors
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (isLoading) {
     return (
@@ -293,10 +293,10 @@ const BookingsPage = () => {
                   <div className="space-y-2">
                     <h4 className="font-semibold text-sm">حالة المصادقة</h4>
                     <div className="text-xs space-y-1">
-                      <div>المستخدم: {debugInfo.authState.user ? '✅ متصل' : '❌ غير متصل'}</div>
-                      <div>الجلسة: {debugInfo.authState.session ? '✅ نشطة' : '❌ غير نشطة'}</div>
-                      {debugInfo.authState.sessionError && (
-                        <div className="text-destructive">خطأ الجلسة: {debugInfo.authState.sessionError}</div>
+                      <div>المستخدم: {debugInfo.authState && (debugInfo as any).authState.user ? '✅ متصل' : '❌ غير متصل'}</div>
+                      <div>الجلسة: {debugInfo.authState && (debugInfo as any).authState.session ? '✅ نشطة' : '❌ غير نشطة'}</div>
+                      {(debugInfo as any).authState?.sessionError && (
+                        <div className="text-destructive">خطأ الجلسة: {(debugInfo as any).authState.sessionError}</div>
                       )}
                     </div>
                   </div>
@@ -304,9 +304,9 @@ const BookingsPage = () => {
                   <div className="space-y-2">
                     <h4 className="font-semibold text-sm">معلومات الملف الشخصي</h4>
                     <div className="text-xs space-y-1">
-                      <div>الملف الشخصي: {debugInfo.profileState.profile ? '✅ محمل' : '❌ غير محمل'}</div>
-                      {debugInfo.profileState.profile && (
-                        <div>الصلاحية: {debugInfo.profileState.profile.user_role || 'غير محددة'}</div>
+                      <div>الملف الشخصي: {(debugInfo as any).profileState?.profile ? '✅ محمل' : '❌ غير محمل'}</div>
+                      {(debugInfo as any).profileState?.profile && (
+                        <div>الصلاحية: {(debugInfo as any).profileState.profile.user_role || 'غير محددة'}</div>
                       )}
                     </div>
                   </div>

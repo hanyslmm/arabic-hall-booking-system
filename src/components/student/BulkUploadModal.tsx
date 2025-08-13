@@ -246,7 +246,7 @@ export function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProps) {
       // Process students with new data
       for (const studentData of classData.students) {
         // Find or create student (preserving existing student profiles)
-        let student = await findOrCreateStudent(studentData);
+        const student = await findOrCreateStudent(studentData);
         
         // Create new registration
         const registration = await studentRegistrationsApi.create({

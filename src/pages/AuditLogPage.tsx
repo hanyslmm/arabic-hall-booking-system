@@ -26,23 +26,6 @@ export function AuditLogPage() {
 
   const hasAdminAccess = isAdmin || isOwner;
 
-  if (loading) {
-    return (
-      <UnifiedLayout>
-        <div className="flex items-center justify-center h-96">
-          <LoadingSpinner />
-        </div>
-      </UnifiedLayout>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  if (!hasAdminAccess) {
-    return <Navigate to="/" replace />;
-  }
-
   // Fetch audit logs with actor names
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ['audit-logs', user?.id],
@@ -88,6 +71,24 @@ export function AuditLogPage() {
     enabled: !!user,
     staleTime: 30_000,
   });
+
+  // Auth/role redirects AFTER hooks
+  if (loading) {
+    return (
+      <UnifiedLayout>
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner />
+        </div>
+      </UnifiedLayout>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!hasAdminAccess) {
+    return <Navigate to="/" replace />;
+  }
 
   const getActionDisplayName = (action: string) => {
     const actionMap: { [key: string]: string } = {

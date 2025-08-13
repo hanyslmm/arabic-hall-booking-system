@@ -16,25 +16,6 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const [duration, setDuration] = useState("");
 
-  // Handle auth loading
-  if (loading) {
-    return (
-      <UnifiedLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-lg">جاري التحميل...</div>
-        </div>
-      </UnifiedLayout>
-    );
-  }
-
-  // Check if user is admin
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  if (profile?.user_role !== 'owner' && profile?.user_role !== 'manager') {
-    return <Navigate to="/" replace />;
-  }
-
   // Fetch settings
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -44,8 +25,9 @@ export function SettingsPage() {
         .select('*');
       
       if (error) throw error;
-      return data;
-    }
+      return data as Array<{ key: string; value: string }>;
+    },
+    enabled: !!user,
   });
 
   // Update setting mutation
@@ -83,6 +65,24 @@ export function SettingsPage() {
       }
     }
   }, [settings]);
+
+  // Auth checks AFTER hooks
+  if (loading) {
+    return (
+      <UnifiedLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-lg">جاري التحميل...</div>
+        </div>
+      </UnifiedLayout>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (profile?.user_role !== 'owner' && profile?.user_role !== 'manager') {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
