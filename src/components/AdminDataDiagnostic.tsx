@@ -150,8 +150,8 @@ export const AdminDataDiagnostic = () => {
         }
       }
 
-      // Test 5: Data access tests
-      const tables = ['bookings', 'students', 'teachers', 'halls', 'subjects'];
+      // Test 5: Data access tests (expanded to cover critical tables)
+      const tables = ['bookings', 'students', 'teachers', 'halls', 'subjects', 'student_registrations', 'payment_records', 'attendance_records'];
       
       for (const table of tables) {
         try {
