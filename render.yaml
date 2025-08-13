@@ -3,7 +3,7 @@ services:
     name: arabic-hall-booking-system
     env: node
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npx serve -s dist -l $PORT
     envVars:
       - key: NODE_ENV
         value: production
