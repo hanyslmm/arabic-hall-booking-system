@@ -6,20 +6,14 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: "0.0.0.0",
     port: 8080,
     allowedHosts: true
   },
   preview: {
-    host: "::",
+    host: "0.0.0.0",
     port: 8080,
-    allowedHosts: [
-      "localhost",
-      "127.0.0.1",
-      "arabic-hall-booking-system.onrender.com",
-      ".lovable.dev",
-      ".lovableproject.com"
-    ],
+    allowedHosts: true,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',

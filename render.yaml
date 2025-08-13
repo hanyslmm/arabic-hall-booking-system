@@ -2,13 +2,11 @@ services:
   - type: web
     name: arabic-hall-booking-system
     env: node
-    buildCommand: npm install && npm run build
-    startCommand: npx serve -s dist -l $PORT
+    buildCommand: npm ci --no-audit --no-fund && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
