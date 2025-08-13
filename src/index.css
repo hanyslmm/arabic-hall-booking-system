@@ -465,6 +465,34 @@
     box-shadow: 0 2px 8px hsl(var(--destructive) / 0.1);
   }
 
+  /* Border consistency fixes */
+  .border-consistent {
+    @apply border border-border rounded-lg;
+  }
+
+  .border-consistent-md {
+    @apply border border-border rounded-md;
+  }
+
+  .border-consistent-sm {
+    @apply border border-border rounded-sm;
+  }
+
+  /* Card border fixes */
+  .card-border-fix {
+    @apply border border-border rounded-lg shadow-sm;
+  }
+
+  /* Input border fixes */
+  .input-border-fix {
+    @apply border border-input rounded-md;
+  }
+
+  /* Button border fixes */
+  .button-border-fix {
+    @apply border border-border rounded-md;
+  }
+
   /* Enhanced status badges */
   .status-active {
     @apply bg-success/15 text-success border border-success/30 shadow-sm;

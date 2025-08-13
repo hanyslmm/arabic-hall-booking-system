@@ -120,17 +120,17 @@ export const HallsGrid = ({ occupancyData }: HallsGridProps) => {
                     <span className="font-semibold text-primary">{hall.capacity} طالب</span>
                   </div>
                   
-                    <div className={`capacity-indicator ${getCapacityVariant(hall.capacity)}`}>
-                      {getCapacityLabel(hall.capacity)}
-                    </div>
+                  <div className={`capacity-indicator ${getCapacityVariant(hall.capacity)}`}>
+                    {getCapacityLabel(hall.capacity)}
+                  </div>
 
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <Activity className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-muted-foreground">نسبة الاشغال:</span>
-                      <span className={`font-semibold ${getOccupancyColor(getOccupancyForHall(hall.id))}`}>
-                        {getOccupancyForHall(hall.id)}%
-                      </span>
-                    </div>
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">نسبة الاشغال:</span>
+                    <span className={`font-semibold ${getOccupancyColor(getOccupancyForHall(hall.id))}`}>
+                      {getOccupancyForHall(hall.id)}%
+                    </span>
+                  </div>
                   
                   <p className="text-xs text-muted-foreground mt-2">
                     انقر لعرض الجدول الأسبوعي

@@ -316,7 +316,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
   const baseCandidates = [
     { title: "الرئيسية", url: "/", icon: Home, show: true },
     { title: "الحجوزات", url: "/bookings", icon: Calendar, show: true },
-    { title: "الطلاب", url: "/students", icon: Users, show: !isOwnerOrAdmin || isOwnerOrAdmin },
+    { title: "الطلاب", url: "/students", icon: Users, show: true },
     { title: "التقارير", url: "/reports", icon: BookOpen, show: isOwnerOrAdmin },
     { title: "الإعدادات", url: "/settings", icon: Settings, show: isOwnerOrAdmin },
   ];
