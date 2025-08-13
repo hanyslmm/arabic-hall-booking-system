@@ -92,11 +92,9 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   }
   
   return (
-    <UnifiedLayout>
-      <Suspense fallback={<LoadingScreen />}>
-        {children}
-      </Suspense>
-    </UnifiedLayout>
+    <Suspense fallback={<LoadingScreen />}>
+      {children}
+    </Suspense>
   );
 }
 
@@ -152,7 +150,7 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/audit-logs" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
             <Route path="/diagnostics" element={<ProtectedRoute><DiagnosticsPage /></ProtectedRoute>} />
-            <Route path="/style-showcase" element={<ProtectedRoute><StyleShowcase /></ProtectedRoute>} />
+                         <Route path="/style-showcase" element={<ProtectedRoute><UnifiedLayout><StyleShowcase /></UnifiedLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
