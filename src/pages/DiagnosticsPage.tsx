@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ const DiagnosticsPage = () => {
   const [diagnostics, setDiagnostics] = useState<DiagnosticResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  const runDiagnostics = async () => {
+  const runDiagnostics = useCallback(async () => {
     setIsRunning(true);
     const results: DiagnosticResult[] = [];
 
@@ -200,13 +200,13 @@ const DiagnosticsPage = () => {
 
     setDiagnostics(results);
     setIsRunning(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!loading) {
       runDiagnostics();
     }
-  }, [loading]);
+  }, [loading, runDiagnostics]);
 
   const getStatusIcon = (status: 'success' | 'error' | 'warning') => {
     switch (status) {

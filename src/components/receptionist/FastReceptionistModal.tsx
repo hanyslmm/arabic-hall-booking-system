@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,7 @@ const queryClient = useQueryClient();
     }
     preload();
     return () => { cancelled = true; };
-  }, [isOpen, initialStudentId]);
+  }, [isOpen, initialStudentId, selectedStudent]);
   // Search students by serial or mobile
   const { data: searchResults, isLoading: searching } = useQuery({
     queryKey: ['student-search', searchTerm],
@@ -101,8 +101,9 @@ const queryClient = useQueryClient();
       const isToday = (reg.booking?.days_of_week || []).includes(todayWeekday);
       sel[reg.id] = isToday;
       // Paid this month if any payment record within current month or status says paid and payment_date in current month
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const paidThisMonth = (reg.payment_records || []).some((p: any) => {
         const d = new Date(p.payment_date);
         return d >= monthStart && d < monthEnd;
@@ -112,7 +113,7 @@ const queryClient = useQueryClient();
     });
     setSelectedForAttendance(sel);
     setMarkPaid(paid);
-  }, [JSON.stringify(registrations), todayWeekday]);
+  }, [registrations, todayWeekday]);
 
   const paymentMutation = useMutation({
     mutationFn: async (data: { registrationId: string; amount: number }) => {
@@ -145,7 +146,7 @@ const queryClient = useQueryClient();
     }
   });
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     if (!registrations || !selectedStudent) return;
     const regs = registrations as any[];
     const selectedIds = regs.filter(r => selectedForAttendance[r.id]).map(r => r.id);
@@ -170,7 +171,7 @@ const queryClient = useQueryClient();
     setSelectedForAttendance({});
     setMarkPaid({});
     setTimeout(() => searchInputRef.current?.focus(), 100);
-  };
+  }, [registrations, selectedStudent, selectedForAttendance, markPaid, attendanceMutation, paymentMutation, toast]);
 
   // Hit Enter to confirm
   useEffect(() => {
@@ -183,7 +184,7 @@ const queryClient = useQueryClient();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, selectedForAttendance, markPaid, registrations]);
+  }, [isOpen, selectedForAttendance, markPaid, registrations, handleConfirm]);
 
   // Auto-focus search when modal opens
   useEffect(() => {

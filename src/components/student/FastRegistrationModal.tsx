@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -231,7 +231,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
   });
 
   // Handle barcode scan
-  const handleBarcodeScan = async (result: string) => {
+  const handleBarcodeScan = useCallback(async (result: string) => {
     setBarcodeInput(result);
     if (result.trim()) {
       await searchMutation.mutateAsync(result.trim());
@@ -239,7 +239,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
         await handleUltraFastProcess();
       }
     }
-  };
+  }, [searchMutation, ultraFastMode, handleUltraFastProcess]);
 
   // Handle manual barcode input
   const handleBarcodeSubmit = async () => {
@@ -352,7 +352,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
       document.addEventListener('keydown', handlePhysicalScan);
       return () => document.removeEventListener('keydown', handlePhysicalScan);
     }
-  }, [isOpen, physicalScannerMode, scanBuffer, lastScanTime]);
+  }, [isOpen, physicalScannerMode, scanBuffer, lastScanTime, handleBarcodeScan]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -406,7 +406,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedStudent, isRegistering, physicalScannerMode]);
+  }, [isOpen, selectedStudent, isRegistering, physicalScannerMode, handleClose, handleRegister]);
 
   // Calculate total when selected classes change
   useEffect(() => {
@@ -416,7 +416,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
   }, [selectedClasses]);
 
   // Handle registration
-  const handleRegister = async () => {
+  const handleRegister = useCallback(async () => {
     if (!selectedStudent) {
       toast.error("يرجى مسح رمز الطالب أولاً");
       return;
@@ -444,11 +444,15 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
     } finally {
       setIsRegistering(false);
     }
-  };
+  }, [selectedStudent, selectedClasses, paymentAmount, registerMutation]);
 
   // Ultra-Fast processing: mark attendance for all today's classes and create payment if not paid this month
-  const handleUltraFastProcess = async () => {
+  const handleUltraFastProcess = useCallback(async () => {
     if (!selectedStudent) return;
+    const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const now = new Date();
+    const todayWeekday = weekdays[now.getDay()];
+    const todayISO = new Date().toISOString().split('T')[0];
     // Determine registrations of student and filter to today's classes
     const { data, error } = await supabase
       .from("student_registrations")
@@ -465,8 +469,8 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
       return;
     }
     const regs = (data || []).filter((r: any) => (r.booking?.days_of_week || []).includes(todayWeekday));
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const results: Array<{
       id: string;
       hall?: string;
@@ -520,9 +524,9 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
     setUltraResults(results);
     // Keep data on screen for review: fetch existing registrations to hide available class list and show student info
     toast.success("تم تسجيل الحضور والدفع تلقائياً");
-  };
+  }, [selectedStudent]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setBarcodeInput("");
     setSelectedStudent(null);
     setSelectedClasses({});
@@ -533,7 +537,7 @@ export const FastRegistrationModal = ({ isOpen, onClose }: FastRegistrationModal
     setUltraResults([]);
     searchMutation.reset();
     onClose();
-  };
+  }, [onClose, searchMutation]);
 
   const getDaysInArabic = (days: string[]) => {
     const daysMap: { [key: string]: string } = {

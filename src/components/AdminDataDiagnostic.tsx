@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -281,7 +281,7 @@ export const AdminDataDiagnostic = () => {
   };
 
   // Run all diagnostics
-  const runDiagnostics = async () => {
+  const runDiagnostics = useCallback(async () => {
     setIsRunning(true);
     try {
       const dbResults = await testDatabaseAccess();
@@ -297,11 +297,11 @@ export const AdminDataDiagnostic = () => {
     } finally {
       setIsRunning(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     runDiagnostics();
-  }, []);
+  }, [runDiagnostics]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
