@@ -3,7 +3,7 @@ import { UserPrivilegeManager } from "@/components/admin/UserPrivilegeManager";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const AdminPrivilegesPage = () => {
@@ -12,23 +12,20 @@ const AdminPrivilegesPage = () => {
   return (
     <UnifiedLayout>
       <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-              <Shield className="h-8 w-8" />
-              إدارة الصلاحيات الإدارية
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              ترقية المستخدمين وإدارة الصلاحيات
-            </p>
-          </div>
-          <Button asChild>
-            <Link to="/">
-              <ArrowLeft className="ml-2 h-4 w-4" />
-              العودة إلى لوحة التحكم
-            </Link>
-          </Button>
-        </div>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>إدارة صلاحيات المستخدم</CardTitle>
+              <CardDescription>ترقية المستخدمين إلى أدوار مختلفة.</CardDescription>
+            </div>
+            <Button asChild>
+              <Link to="/">
+                <ArrowRight className="ml-2 h-4 w-4" />
+                العودة إلى لوحة التحكم
+              </Link>
+            </Button>
+          </CardHeader>
+        </Card>
         
         <div className="max-w-2xl">
           <UserPrivilegeManager />
