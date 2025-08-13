@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { UnifiedLayout } from "@/components/layout/UnifiedLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import BookingPage from "./pages/BookingPage";
 import UsersPage from "./pages/UsersPage";
 import TeachersPage from "./pages/TeachersPage";
@@ -29,7 +30,7 @@ import DiagnosticsPage from "./pages/DiagnosticsPage";
 import { ReceptionistDashboard } from "./components/receptionist/ReceptionistDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import { AdminDashboard } from "./components/dashboard/AdminDashboard";
-import { ReactNode, Suspense } from "react";
+import { ReactNode, Suspense, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -99,10 +100,34 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   );
 }
 
+// Component to handle toast events
+function ToastEventListener() {
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const handleShowToast = (event: CustomEvent) => {
+      const { title, description, variant } = event.detail;
+      toast({
+        title,
+        description,
+        variant: variant || "default",
+      });
+    };
+
+    window.addEventListener('showToast' as any, handleShowToast);
+    return () => {
+      window.removeEventListener('showToast' as any, handleShowToast);
+    };
+  }, [toast]);
+
+  return null;
+}
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <ToastEventListener />
         <Toaster />
         <Sonner />
         <BrowserRouter>
