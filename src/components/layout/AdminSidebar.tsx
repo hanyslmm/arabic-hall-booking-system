@@ -250,21 +250,20 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
     }
   };
 
+  // Quick access mobile bottom navigation items based on available routes
+  const quickNavCandidates = [
+    { title: "الرئيسية", url: "/", icon: Home },
+    { title: "الحجوزات", url: "/bookings", icon: Calendar },
+    { title: "الطلاب", url: "/students", icon: Users },
+    { title: "التقارير", url: "/reports", icon: BookOpen },
+    { title: "الإعدادات", url: "/settings", icon: Settings },
+  ];
+  const quickNav = quickNavCandidates.filter((candidate) =>
+    navGroups.some((group) => group.items.some((it) => it.url === candidate.url))
+  );
+
   return (
     <div className="flex h-screen bg-background">
-      {/* Fixed Burger Menu Button - Always visible in top-right */}
-      <div className="fixed top-4 right-4 z-[60] lg:right-6">
-        <Button
-          variant="default"
-          size="sm"
-          onClick={openSidebar}
-          className="h-10 w-10 p-0 rounded-full shadow-lg bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105 burger-menu-enter lg:hidden"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">فتح القائمة</span>
-        </Button>
-      </div>
-
       {/* Mobile backdrop with improved touch handling */}
       {sidebarOpen && (
         <div
@@ -369,18 +368,55 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:mr-72">
-        {/* Top Header - simplified and without burger */}
-        <header className="flex h-14 sm:h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4">
+        {/* Top Header - with integrated burger on mobile */}
+        <header className="flex h-14 sm:h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4 sticky top-0 z-40">
           <div className="flex flex-1 items-center justify-between">
-            <h1 className="text-lg sm:text-xl font-bold text-primary">Science Club</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={openSidebar}
+                className="h-10 w-10 p-0 rounded-full shadow bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">فتح القائمة</span>
+              </Button>
+              <h1 className="text-lg sm:text-xl font-bold text-primary">Science Club</h1>
+            </div>
             <div className="flex items-center gap-2">
               <NotificationBell />
             </div>
           </div>
         </header>
 
-        {/* Page Content with improved scrolling */}
-        <main className="flex-1 overflow-auto p-4">{children}</main>
+        {/* Page Content with improved scrolling and space for mobile bottom bar */}
+        <main className="flex-1 overflow-auto p-4 pb-28 md:pb-6">{children}</main>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-[56] md:hidden">
+        <div className="mx-auto max-w-screen-sm">
+          <div className="border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-[env(safe-area-inset-bottom)]">
+            <nav className="grid grid-cols-5 items-center">
+              {quickNav.map((item) => {
+                const isActive = location.pathname === item.url;
+                return (
+                  <button
+                    key={item.url}
+                    onClick={() => navigate(item.url)}
+                    className={cn(
+                      "flex flex-col items-center justify-center py-2 text-[11px] leading-tight",
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className={cn("h-5 w-5", isActive && "scale-110")} />
+                    <span className="mt-1">{item.title}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
       </div>
     </div>
   );
