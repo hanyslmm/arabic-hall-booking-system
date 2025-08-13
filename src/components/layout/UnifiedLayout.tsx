@@ -1,7 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { ReceptionistDashboard } from "@/components/receptionist/ReceptionistDashboard";
-import TeacherDashboard from "@/pages/TeacherDashboard";
 import { Home, Calendar, Users, Building2, GraduationCap, BookOpen, Settings, Shield } from "lucide-react";
 
 interface UnifiedLayoutProps {
@@ -14,9 +12,6 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
   const userRole = profile?.user_role;
   const isOwnerOrAdmin = isAdmin || isOwner || canManageUsers;
   const isTeacher = userRole === 'teacher';
-
-  // Determine index/dashboard page
-  const isIndexPage = typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '/index');
 
   // Build navigation based on role
   const navigation = [
@@ -65,7 +60,7 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
             title: "التقارير المالية",
             items: [
               { title: "التقارير", url: "/reports", icon: BookOpen },
-              { title: "تقارير المجموعات", url: "/class-financial-reports", icon: BookOpen },
+              { title: "تقارير المجموعات", url: "/financial-reports", icon: BookOpen },
             ],
           }]
         : []
@@ -87,11 +82,7 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
 
   return (
     <AdminSidebar navigation={navigation as any} appTitle="نادي العلوم" appSubtitle={isOwnerOrAdmin ? "لوحة التحكم الإدارية" : undefined}>
-      {isIndexPage ? (
-        isTeacher ? <TeacherDashboard /> : <ReceptionistDashboard />
-      ) : (
-        children
-      )}
+      {children}
     </AdminSidebar>
   );
 }

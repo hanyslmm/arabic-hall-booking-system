@@ -128,7 +128,7 @@ const defaultNavigation: NavigationGroup[] = [
       },
       {
         title: "تقارير المجموعات",
-        url: "/class-financial-reports",
+        url: "/financial-reports",
         icon: BookOpen,
         description: "التقارير المالية للمجموعات",
       },
@@ -200,9 +200,12 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
   const { sidebarOpen, openSidebar, closeSidebar } = useNavigation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile, isAdmin, isOwner, canManageUsers } = useAuth();
 
   const navGroups = navigation ?? defaultNavigation;
+
+  // Make bottom nav height available as a CSS variable for dynamic padding
+  const bottomNavHeightPx = 64; // keep in sync with bottom nav visual height
 
   // Lock body scroll when sidebar is open (mobile drawer)
   useEffect(() => {
@@ -250,20 +253,28 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
     }
   };
 
-  // Quick access mobile bottom navigation items based on available routes
-  const quickNavCandidates = [
-    { title: "الرئيسية", url: "/", icon: Home },
-    { title: "الحجوزات", url: "/bookings", icon: Calendar },
-    { title: "الطلاب", url: "/students", icon: Users },
-    { title: "التقارير", url: "/reports", icon: BookOpen },
-    { title: "الإعدادات", url: "/settings", icon: Settings },
+  // Quick access mobile bottom navigation items based on role/permissions and available routes
+  const isOwnerOrAdmin = isAdmin || isOwner || canManageUsers;
+  const isTeacher = profile?.user_role === 'teacher';
+
+  const baseCandidates = [
+    { title: "الرئيسية", url: "/", icon: Home, show: true },
+    { title: "الحجوزات", url: "/bookings", icon: Calendar, show: true },
+    { title: "الطلاب", url: "/students", icon: Users, show: !isOwnerOrAdmin || isOwnerOrAdmin },
+    { title: "التقارير", url: "/reports", icon: BookOpen, show: isOwnerOrAdmin },
+    { title: "الإعدادات", url: "/settings", icon: Settings, show: isOwnerOrAdmin },
   ];
-  const quickNav = quickNavCandidates.filter((candidate) =>
-    navGroups.some((group) => group.items.some((it) => it.url === candidate.url))
-  );
+
+  const quickNav = baseCandidates
+    .filter((c) => c.show)
+    .filter((candidate) =>
+      navGroups.some((group) => group.items.some((it) => it.url === candidate.url))
+    )
+    // Limit to 5 items and prefer core items for teachers vs admins
+    .slice(0, 5);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background" style={{ ['--bottom-nav-height' as any]: `${bottomNavHeightPx}px` }}>
       {/* Mobile backdrop with improved touch handling */}
       {sidebarOpen && (
         <div
@@ -390,7 +401,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
         </header>
 
         {/* Page Content with improved scrolling and space for mobile bottom bar */}
-        <main className="flex-1 overflow-auto p-4 pb-28 md:pb-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:pb-6 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+16px)]">{children}</main>
       </div>
 
       {/* Mobile Bottom Navigation */}

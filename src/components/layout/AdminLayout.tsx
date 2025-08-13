@@ -1,16 +1,4 @@
-import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { useAuth } from "@/hooks/useAuth";
-
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
-
-export function AdminLayout({ children }: AdminLayoutProps) {
-  const { isAdmin } = useAuth();
-  
-  if (!isAdmin) {
-    return <>{children}</>;
-  }
-
-  return <AdminSidebar>{children}</AdminSidebar>;
+// Deprecated: use UnifiedLayout at the router level
+export function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }
