@@ -196,7 +196,7 @@ export const AddStudentModal = ({ isOpen, onClose }: AddStudentModalProps) => {
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 text-right">
           <div className="space-y-2">
             <Label htmlFor="serial_number">الرقم التسلسلي (اختياري)</Label>
             <Input
@@ -209,6 +209,7 @@ export const AddStudentModal = ({ isOpen, onClose }: AddStudentModalProps) => {
               onChange={(e) => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
               onBlur={handleBlurSerial}
               aria-invalid={!!fieldErrors.serial_number}
+              className="text-right"
             />
             {fieldErrors.serial_number && (
               <p className="text-sm text-red-500">{fieldErrors.serial_number}</p>
@@ -226,6 +227,7 @@ export const AddStudentModal = ({ isOpen, onClose }: AddStudentModalProps) => {
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              className="text-right"
             />
           </div>
           
@@ -239,6 +241,7 @@ export const AddStudentModal = ({ isOpen, onClose }: AddStudentModalProps) => {
               onBlur={handleBlurPhone}
               aria-invalid={!!fieldErrors.mobile_phone}
               required
+              className="text-right"
             />
             {(isChecking.mobile_phone) && (
               <p className="text-xs text-muted-foreground">جاري التحقق من الرقم...</p>
@@ -255,6 +258,7 @@ export const AddStudentModal = ({ isOpen, onClose }: AddStudentModalProps) => {
               placeholder="رقم هاتف ولي الأمر"
               value={formData.parent_phone}
               onChange={(e) => setFormData(prev => ({ ...prev, parent_phone: e.target.value }))}
+              className="text-right"
             />
           </div>
           
@@ -265,14 +269,15 @@ export const AddStudentModal = ({ isOpen, onClose }: AddStudentModalProps) => {
               placeholder="المدينة"
               value={formData.city}
               onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+              className="text-right"
             />
           </div>
           
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <DialogFooter className="grid grid-cols-1 sm:flex sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} className="w-full sm:w-auto">
               إلغاء
             </Button>
-            <Button type="submit" disabled={createMutation.isPending || isChecking.mobile_phone || isChecking.serial_number || !!fieldErrors.mobile_phone || !!fieldErrors.serial_number}>
+            <Button type="submit" className="w-full sm:w-auto" disabled={createMutation.isPending || isChecking.mobile_phone || isChecking.serial_number || !!fieldErrors.mobile_phone || !!fieldErrors.serial_number}>
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               إضافة الطالب
             </Button>

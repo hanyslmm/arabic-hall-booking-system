@@ -1,8 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { Navbar } from "@/components/layout/Navbar";
 import { ReceptionistDashboard } from "@/components/receptionist/ReceptionistDashboard";
 import TeacherDashboard from "@/pages/TeacherDashboard";
+import { Home, Calendar, Users, Building2, GraduationCap, BookOpen, Settings, Shield } from "lucide-react";
 
 interface UnifiedLayoutProps {
   children: React.ReactNode;
@@ -11,53 +11,87 @@ interface UnifiedLayoutProps {
 export function UnifiedLayout({ children }: UnifiedLayoutProps) {
   const { profile, isAdmin, isOwner, canManageUsers } = useAuth();
   
-  const hasAdminAccess = isAdmin || isOwner || canManageUsers;
-  const isTeacher = profile?.user_role === 'teacher';
-  
-  // Check if this is the index/dashboard page for special dashboard handling
-  const isIndexPage = window.location.pathname === '/' || window.location.pathname === '/index';
+  const userRole = profile?.user_role;
+  const isOwnerOrAdmin = isAdmin || isOwner || canManageUsers;
+  const isTeacher = userRole === 'teacher';
 
-  // All admin users get the consistent AdminSidebar
-  if (hasAdminAccess) {
-    return (
-      <AdminSidebar>
-        {/* Show receptionist dashboard on index page, otherwise show regular content */}
-        {isIndexPage ? <ReceptionistDashboard /> : children}
-      </AdminSidebar>
-    );
-  }
+  // Determine index/dashboard page
+  const isIndexPage = typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '/index');
 
-  // Teachers get their own dashboard on index page
-  if (isTeacher) {
-    return (
-      <>
-        <Navbar 
-          userRole={profile?.user_role} 
-          userName={profile?.full_name || profile?.email || undefined}
-          isAdmin={isAdmin}
-        />
-        <main className="flex-1 overflow-y-auto bg-muted/40">
-          <div className="container mx-auto px-4 py-6 pt-20 sm:pt-6">
-            {isIndexPage ? <TeacherDashboard /> : children}
-          </div>
-        </main>
-      </>
-    );
-  }
+  // Build navigation based on role
+  const navigation = [
+    {
+      title: "الإحصائيات",
+      items: [
+        { title: "لوحة التحكم", url: "/", icon: Home },
+      ],
+    },
+    {
+      title: isTeacher ? "المجموعات" : "إدارة الحجوزات",
+      items: [
+        isTeacher
+          ? { title: "مراقبة المجموعات", url: "/bookings", icon: Calendar }
+          : { title: "جميع الحجوزات", url: "/bookings", icon: Calendar },
+        ...(
+          isOwnerOrAdmin && !isTeacher
+            ? [{ title: "حجز جديد", url: "/booking", icon: Calendar }]
+            : []
+        ),
+      ] as any,
+    },
+    {
+      title: "إدارة الطلاب",
+      items: [
+        { title: "الطلاب", url: "/students", icon: Users },
+        { title: "تسجيل الطلاب", url: "/student-registrations", icon: Users },
+      ],
+    },
+    ...(
+      (isOwnerOrAdmin || userRole === 'space_manager') && !isTeacher
+        ? [{
+            title: "إدارة الموارد",
+            items: [
+              { title: "القاعات", url: "/halls", icon: Building2 },
+              { title: "المعلمين", url: "/teachers", icon: GraduationCap },
+              { title: "المواد الدراسية", url: "/subjects", icon: BookOpen },
+              { title: "المراحل التعليمية", url: "/stages", icon: GraduationCap },
+            ],
+          }]
+        : []
+    ),
+    ...(
+      isOwnerOrAdmin && !isTeacher
+        ? [{
+            title: "التقارير المالية",
+            items: [
+              { title: "التقارير", url: "/reports", icon: BookOpen },
+              { title: "تقارير المجموعات", url: "/class-financial-reports", icon: BookOpen },
+            ],
+          }]
+        : []
+    ),
+    ...(
+      isOwnerOrAdmin && !isTeacher
+        ? [{
+            title: "إدارة النظام",
+            items: [
+              { title: "المستخدمين", url: "/users", icon: Users },
+              { title: "سجل التدقيق", url: "/audit-logs", icon: Shield },
+              { title: "صلاحيات المدراء", url: "/admin-privileges", icon: Settings },
+              { title: "الإعدادات", url: "/settings", icon: Settings },
+            ],
+          }]
+        : []
+    ),
+  ];
 
-  // Regular users get the top navbar
   return (
-    <>
-      <Navbar 
-        userRole={profile?.user_role} 
-        userName={profile?.full_name || profile?.email || undefined}
-        isAdmin={isAdmin}
-      />
-      <main className="flex-1 overflow-y-auto bg-muted/40">
-        <div className="container mx-auto px-4 py-6 pt-20 sm:pt-6">
-          {isIndexPage ? <ReceptionistDashboard /> : children}
-        </div>
-      </main>
-    </>
+    <AdminSidebar navigation={navigation as any} appTitle="نادي العلوم" appSubtitle={isOwnerOrAdmin ? "لوحة التحكم الإدارية" : undefined}>
+      {isIndexPage ? (
+        isTeacher ? <TeacherDashboard /> : <ReceptionistDashboard />
+      ) : (
+        children
+      )}
+    </AdminSidebar>
   );
 }

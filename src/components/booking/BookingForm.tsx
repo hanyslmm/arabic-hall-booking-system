@@ -209,7 +209,7 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
       </CardHeader>
       <CardContent>
         {recentBookingSummary && (
-          <div className="mb-6 rounded-lg border border-success/20 bg-success/5 p-4">
+          <div className="mb-6 rounded-lg border border-success/20 bg-success/5 p-4 text-right">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-success mt-0.5" />
               <div className="space-y-1 text-sm">
@@ -224,7 +224,7 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
                   الأيام: <span className="font-medium">{recentBookingSummary.days.map(d => DAYS_OF_WEEK.find(dd => dd.value === d)?.label || d).join('، ')}</span>
                 </div>
                 <div className="pt-2">
-                  <Button asChild size="sm" variant="secondary">
+                  <Button asChild size="sm" variant="secondary" className="w-full sm:w-auto">
                     <a href="/bookings">عرض جميع الحجوزات</a>
                   </Button>
                 </div>
@@ -232,7 +232,7 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
             </div>
           </div>
         )}
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 text-right">
           {/* Hall Selection */}
           <div className="space-y-2">
             <Label htmlFor="hall_id">القاعة</Label>
@@ -240,9 +240,9 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
               <SelectTrigger>
                 <SelectValue placeholder="اختر القاعة" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="text-right">
                 {halls?.map((hall) => (
-                  <SelectItem key={hall.id} value={hall.id}>
+                  <SelectItem key={hall.id} value={hall.id} className="text-right">
                     {hall.name} (سعة {hall.capacity} طالب)
                   </SelectItem>
                 ))}
@@ -260,9 +260,9 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
               <SelectTrigger>
                 <SelectValue placeholder="اختر المعلم" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="text-right">
                 {teachers?.map((teacher) => (
-                  <SelectItem key={teacher.id} value={teacher.id}>
+                  <SelectItem key={teacher.id} value={teacher.id} className="text-right">
                     {teacher.name}
                   </SelectItem>
                 ))}
@@ -280,9 +280,9 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
               <SelectTrigger>
                 <SelectValue placeholder="اختر المرحلة الدراسية" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="text-right">
                 {academicStages?.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
+                  <SelectItem key={stage.id} value={stage.id} className="text-right">
                     {stage.name}
                   </SelectItem>
                 ))}
@@ -328,13 +328,12 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
             )}
           </div>
 
-
           {/* Days of Week */}
           <div className="space-y-2">
             <Label>أيام الأسبوع</Label>
             <div className="grid grid-cols-2 gap-2">
               {DAYS_OF_WEEK.map((day) => (
-                <div key={day.value} className="flex items-center space-x-2 space-x-reverse">
+                <div key={day.value} className="flex items-center space-x-2 space-x-reverse justify-end">
                   <Checkbox
                     id={day.value}
                     checked={selectedDays.includes(day.value)}

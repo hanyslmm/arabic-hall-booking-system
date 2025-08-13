@@ -145,11 +145,11 @@ export function ReceptionistDashboard() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">الاستقبال</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">الاستقبال</h1>
           <p className="text-muted-foreground">
             {format(new Date(), 'EEEE, MMMM dd, yyyy')}
           </p>
@@ -157,7 +157,7 @@ export function ReceptionistDashboard() {
         <Button 
           onClick={() => setShowFastModal(true)}
           size="lg"
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
         >
           <Zap className="h-5 w-5 mr-2" />
           التسجيل السريع
@@ -224,7 +224,7 @@ export function ReceptionistDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {quickActions.map((action, index) => (
           <Card 
             key={index} 
@@ -280,7 +280,7 @@ export function ReceptionistDashboard() {
                       <Badge variant={reg.payment_status === 'pending' ? 'destructive' : 'secondary'}>
                         {reg.payment_status === 'pending' ? 'معلق' : 'جزئي'}
                       </Badge>
-                      <Button size="sm" onClick={() => { setFastModalStudentId(reg.student_id); setShowFastModal(true); }}>
+                      <Button size="sm" className="w-full sm:w-auto" onClick={() => { setFastModalStudentId(reg.student_id); setShowFastModal(true); }}>
                         تحصيل
                       </Button>
                     </div>
@@ -296,7 +296,7 @@ export function ReceptionistDashboard() {
             </div>
             {pendingPaymentsCount > 10 && (
               <div className="text-center mt-3">
-                <Button variant="outline" onClick={() => window.location.href = '/student-registrations'}>
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => window.location.href = '/student-registrations'}>
                   عرض الكل ({pendingPaymentsCount})
                 </Button>
               </div>

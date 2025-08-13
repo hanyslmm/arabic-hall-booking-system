@@ -24,11 +24,19 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect } from "react";
 
-interface AdminSidebarProps {
-  children: React.ReactNode;
+interface NavigationGroup {
+  title: string;
+  items: { title: string; url: string; icon: any; description?: string }[];
 }
 
-const navigation = [
+interface AdminSidebarProps {
+  children: React.ReactNode;
+  navigation?: NavigationGroup[];
+  appTitle?: string;
+  appSubtitle?: string;
+}
+
+const defaultNavigation: NavigationGroup[] = [
   {
     title: "الإحصائيات",
     items: [
@@ -188,11 +196,13 @@ const LogoutButton = () => {
   );
 };
 
-export function AdminSidebar({ children }: AdminSidebarProps) {
+export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: AdminSidebarProps) {
   const { sidebarOpen, openSidebar, closeSidebar } = useNavigation();
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
+
+  const navGroups = navigation ?? defaultNavigation;
 
   // Lock body scroll when sidebar is open (mobile drawer)
   useEffect(() => {
@@ -273,7 +283,8 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
       {/* Enhanced Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-80 sm:w-72 transform bg-card/95 backdrop-blur-md border-l shadow-2xl transition-all duration-300 ease-out sm:static sm:translate-x-0 sm:w-72 sm:bg-card sm:shadow-none",
+          // Mobile: full-screen sheet; Desktop: fixed sidebar
+          "fixed inset-0 right-0 z-50 w-full transform bg-card/95 backdrop-blur-md border-l shadow-2xl transition-all duration-300 ease-out sm:inset-y-0 sm:left-auto sm:w-72 sm:bg-card sm:shadow-none sm:translate-x-0",
           sidebarOpen ? "translate-x-0 sidebar-enter" : "translate-x-full"
         )}
         style={{ direction: 'rtl' }}
@@ -285,8 +296,8 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
               <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold text-sm sm:text-base">نادي العلوم</span>
-              <span className="truncate text-xs text-muted-foreground hidden sm:block">لوحة التحكم الإدارية</span>
+              <span className="truncate font-semibold text-sm sm:text-base">{appTitle ?? 'نادي العلوم'}</span>
+              <span className="truncate text-xs text-muted-foreground hidden sm:block">{appSubtitle ?? 'لوحة التحكم الإدارية'}</span>
             </div>
           </div>
           <Button
@@ -301,7 +312,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
 
         {/* Sidebar Content with improved scrolling */}
         <ScrollArea className="flex-1 px-3 sm:px-4 py-4 h-[calc(100vh-14rem)] sm:h-[calc(100vh-16rem)]">
-          {navigation.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.title} className="mb-6">
               <h3 className="mb-2 text-xs sm:text-sm font-semibold text-muted-foreground px-2">
                 {group.title}
@@ -358,13 +369,12 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:mr-72">
-        {/* Top Header - More minimal */}
+        {/* Top Header - simplified and without burger */}
         <header className="flex h-14 sm:h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4">
           <div className="flex flex-1 items-center justify-between">
             <h1 className="text-lg sm:text-xl font-bold text-primary">Science Club</h1>
             <div className="flex items-center gap-2">
               <NotificationBell />
-              <div className="w-16 lg:w-0"></div> {/* Spacer for fixed burger menu on mobile */}
             </div>
           </div>
         </header>

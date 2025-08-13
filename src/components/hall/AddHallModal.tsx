@@ -110,7 +110,7 @@ export const AddHallModal = ({ hall, isEdit = false, onSuccess }: AddHallModalPr
             {isEdit ? 'تعديل القاعة' : 'إضافة قاعة جديدة'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 text-right">
           <div className="space-y-2">
             <Label htmlFor="name">اسم القاعة</Label>
             <Input
@@ -119,6 +119,7 @@ export const AddHallModal = ({ hall, isEdit = false, onSuccess }: AddHallModalPr
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="أدخل اسم القاعة"
               disabled={isLoading}
+              className="text-right"
             />
           </div>
           
@@ -132,6 +133,7 @@ export const AddHallModal = ({ hall, isEdit = false, onSuccess }: AddHallModalPr
               onChange={(e) => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
               placeholder="أدخل سعة القاعة"
               disabled={isLoading}
+              className="text-right"
             />
           </div>
 
@@ -143,6 +145,7 @@ export const AddHallModal = ({ hall, isEdit = false, onSuccess }: AddHallModalPr
               value={formData.operating_start_time}
               onChange={(e) => setFormData(prev => ({ ...prev, operating_start_time: e.target.value }))}
               disabled={isLoading}
+              className="text-right"
             />
           </div>
 
@@ -154,19 +157,21 @@ export const AddHallModal = ({ hall, isEdit = false, onSuccess }: AddHallModalPr
               value={formData.operating_end_time}
               onChange={(e) => setFormData(prev => ({ ...prev, operating_end_time: e.target.value }))}
               disabled={isLoading}
+              className="text-right"
             />
           </div>
           
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col sm:flex-row justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               إلغاء
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? 'جاري الحفظ...' : (isEdit ? 'تحديث' : 'إضافة')}
             </Button>
           </div>
