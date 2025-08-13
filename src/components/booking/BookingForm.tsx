@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { format, addHours, parse } from "date-fns";
 import { ar } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
@@ -48,6 +49,13 @@ interface BookingFormProps {
 
 export const BookingForm = ({ onSuccess }: BookingFormProps) => {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [recentBookingSummary, setRecentBookingSummary] = useState<null | {
+    hallName: string;
+    teacherName: string;
+    stageName: string;
+    startTime: string;
+    days: string[];
+  }>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -161,6 +169,13 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
       });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      // Build a short confirmation summary using current selections
+      const hallName = halls?.find(h => h.id === form.getValues('hall_id'))?.name || '';
+      const teacherName = teachers?.find(t => t.id === form.getValues('teacher_id'))?.name || '';
+      const stageName = academicStages?.find(s => s.id === form.getValues('academic_stage_id'))?.name || '';
+      const startTime = form.getValues('start_time');
+      const days = form.getValues('days_of_week');
+      setRecentBookingSummary({ hallName, teacherName, stageName, startTime, days });
       form.reset();
       setSelectedDays([]);
       onSuccess?.();
@@ -193,6 +208,30 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
         <CardTitle className="text-2xl text-center">حجز قاعة جديد</CardTitle>
       </CardHeader>
       <CardContent>
+        {recentBookingSummary && (
+          <div className="mb-6 rounded-lg border border-success/20 bg-success/5 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-success mt-0.5" />
+              <div className="space-y-1 text-sm">
+                <div className="font-semibold">تم حفظ الحجز</div>
+                <div className="text-muted-foreground">
+                  القاعة: <span className="font-medium">{recentBookingSummary.hallName}</span>، المعلم: <span className="font-medium">{recentBookingSummary.teacherName}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  المرحلة: <span className="font-medium">{recentBookingSummary.stageName}</span>، الوقت: <span className="font-medium">{formatTimeDisplay(recentBookingSummary.startTime)}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  الأيام: <span className="font-medium">{recentBookingSummary.days.map(d => DAYS_OF_WEEK.find(dd => dd.value === d)?.label || d).join('، ')}</span>
+                </div>
+                <div className="pt-2">
+                  <Button asChild size="sm" variant="secondary">
+                    <a href="/bookings">عرض جميع الحجوزات</a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Hall Selection */}
           <div className="space-y-2">
@@ -330,7 +369,14 @@ export const BookingForm = ({ onSuccess }: BookingFormProps) => {
             className="w-full"
             disabled={createBookingMutation.isPending}
           >
-            {createBookingMutation.isPending ? "جاري الحفظ..." : "حفظ الحجز"}
+            {createBookingMutation.isPending ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                جاري الحفظ...
+              </span>
+            ) : (
+              "حفظ الحجز"
+            )}
           </Button>
         </form>
       </CardContent>
