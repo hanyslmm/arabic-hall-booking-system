@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
-import { Home, Calendar, Users, Building2, GraduationCap, BookOpen, Settings, Shield } from "lucide-react";
+import { Home, Calendar, Users, Building2, GraduationCap, BookOpen, Settings, Shield, FileText, UserPlus, ClipboardList } from "lucide-react";
 
 interface UnifiedLayoutProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
   const isOwnerOrAdmin = isAdmin || isOwner || canManageUsers;
   const isTeacher = userRole === 'teacher';
 
-  // Build navigation based on role
+  // Build navigation based on role - ensuring admin/owner can see everything
   const navigation = [
     {
       title: "الإحصائيات",
@@ -24,9 +24,11 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
     {
       title: isTeacher ? "المجموعات" : "إدارة الحجوزات",
       items: [
-        isTeacher
-          ? { title: "مراقبة المجموعات", url: "/bookings", icon: Calendar }
-          : { title: "جميع الحجوزات", url: "/bookings", icon: Calendar },
+        {
+          title: isTeacher ? "مراقبة المجموعات" : "جميع الحجوزات",
+          url: "/bookings",
+          icon: Calendar
+        },
         ...(
           isOwnerOrAdmin && !isTeacher
             ? [{ title: "حجز جديد", url: "/booking", icon: Calendar }]
@@ -38,11 +40,12 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
       title: "إدارة الطلاب",
       items: [
         { title: "الطلاب", url: "/students", icon: Users },
-        { title: "تسجيل الطلاب", url: "/student-registrations", icon: Users },
+        { title: "تسجيل الطلاب", url: "/student-registrations", icon: UserPlus },
       ],
     },
     ...(
-      (isOwnerOrAdmin || userRole === 'space_manager') && !isTeacher
+      // Show resource management for admins, owners, and space managers (but not teachers)
+      (isOwnerOrAdmin || userRole === 'space_manager' || userRole === 'read_only') && !isTeacher
         ? [{
             title: "إدارة الموارد",
             items: [
@@ -55,24 +58,26 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
         : []
     ),
     ...(
+      // Show financial reports for admins and owners only
       isOwnerOrAdmin && !isTeacher
         ? [{
             title: "التقارير المالية",
             items: [
-              { title: "التقارير", url: "/reports", icon: BookOpen },
-              { title: "تقارير المجموعات", url: "/financial-reports", icon: BookOpen },
+              { title: "التقارير", url: "/reports", icon: FileText },
+              { title: "تقارير المجموعات", url: "/financial-reports", icon: ClipboardList },
             ],
           }]
         : []
     ),
     ...(
+      // Show system management for admins and owners only
       isOwnerOrAdmin && !isTeacher
         ? [{
             title: "إدارة النظام",
             items: [
               { title: "المستخدمين", url: "/users", icon: Users },
               { title: "سجل التدقيق", url: "/audit-logs", icon: Shield },
-              { title: "صلاحيات المدراء", url: "/admin-privileges", icon: Settings },
+              { title: "صلاحيات المدراء", url: "/admin-privileges", icon: Shield },
               { title: "الإعدادات", url: "/settings", icon: Settings },
             ],
           }]
@@ -80,8 +85,28 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
     ),
   ];
 
+  // Determine the appropriate title and subtitle based on role
+  const appTitle = "نادي العلوم";
+  let appSubtitle = "لوحة التحكم";
+  
+  if (isOwner || userRole === 'owner') {
+    appSubtitle = "لوحة التحكم الإدارية - مالك";
+  } else if (isAdmin || userRole === 'manager') {
+    appSubtitle = "لوحة التحكم الإدارية - مدير";
+  } else if (userRole === 'teacher') {
+    appSubtitle = "لوحة المعلم";
+  } else if (userRole === 'space_manager') {
+    appSubtitle = "لوحة مدير القاعات";
+  } else if (userRole === 'read_only') {
+    appSubtitle = "لوحة المشاهدة";
+  }
+
   return (
-    <AdminSidebar navigation={navigation as any} appTitle="نادي العلوم" appSubtitle={isOwnerOrAdmin ? "لوحة التحكم الإدارية" : undefined}>
+    <AdminSidebar 
+      navigation={navigation as any} 
+      appTitle={appTitle} 
+      appSubtitle={appSubtitle}
+    >
       {children}
     </AdminSidebar>
   );

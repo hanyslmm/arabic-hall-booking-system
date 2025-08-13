@@ -29,20 +29,37 @@ import DiagnosticsPage from "./pages/DiagnosticsPage";
 import { ReceptionistDashboard } from "./components/receptionist/ReceptionistDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import { AdminDashboard } from "./components/dashboard/AdminDashboard";
-import { Skeleton } from "./components/ui/skeleton";
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+});
+
+// Loading component with spinner
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+        <p className="text-muted-foreground">جاري التحميل...</p>
+      </div>
+    </div>
+  );
+}
 
 function RootRoute() {
   const { user, loading, profile, isAdmin, isOwner, canManageUsers } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <Skeleton className="h-12 w-full" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) {
@@ -62,11 +79,24 @@ function RootRoute() {
   return <UnifiedLayout>{dashboard}</UnifiedLayout>;
 }
 
-function ProtectedLayout({ children }: { children: ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen" />;
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  
+  if (loading) {
+    return <LoadingScreen />;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return (
+    <UnifiedLayout>
+      <Suspense fallback={<LoadingScreen />}>
+        {children}
+      </Suspense>
+    </UnifiedLayout>
+  );
 }
 
 const App = () => (
@@ -81,23 +111,23 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
 
             {/* Protected routes wrapped with UnifiedLayout */}
-            <Route path="/booking" element={<ProtectedLayout><BookingPage /></ProtectedLayout>} />
-            <Route path="/users" element={<ProtectedLayout><UsersPage /></ProtectedLayout>} />
-            <Route path="/teachers" element={<ProtectedLayout><TeachersPage /></ProtectedLayout>} />
-            <Route path="/halls" element={<ProtectedLayout><HallsPage /></ProtectedLayout>} />
-            <Route path="/stages" element={<ProtectedLayout><StagesPage /></ProtectedLayout>} />
-            <Route path="/subjects" element={<ProtectedLayout><SubjectsPage /></ProtectedLayout>} />
-            <Route path="/bookings" element={<ProtectedLayout><BookingsPage /></ProtectedLayout>} />
-            <Route path="/students" element={<ProtectedLayout><StudentsPage /></ProtectedLayout>} />
-            <Route path="/student-registrations" element={<ProtectedLayout><StudentRegistrationsPage /></ProtectedLayout>} />
-            <Route path="/class-management/:bookingId" element={<ProtectedLayout><ClassManagementPage /></ProtectedLayout>} />
-            <Route path="/financial-reports" element={<ProtectedLayout><ClassFinancialReportsPage /></ProtectedLayout>} />
-            <Route path="/admin-privileges" element={<ProtectedLayout><AdminPrivilegesPage /></ProtectedLayout>} />
-            <Route path="/settings" element={<ProtectedLayout><SettingsPage /></ProtectedLayout>} />
-            <Route path="/reports" element={<ProtectedLayout><ReportsPage /></ProtectedLayout>} />
-            <Route path="/audit-logs" element={<ProtectedLayout><AuditLogPage /></ProtectedLayout>} />
-            <Route path="/diagnostics" element={<ProtectedLayout><DiagnosticsPage /></ProtectedLayout>} />
-            <Route path="/style-showcase" element={<ProtectedLayout><StyleShowcase /></ProtectedLayout>} />
+            <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+            <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
+            <Route path="/halls" element={<ProtectedRoute><HallsPage /></ProtectedRoute>} />
+            <Route path="/stages" element={<ProtectedRoute><StagesPage /></ProtectedRoute>} />
+            <Route path="/subjects" element={<ProtectedRoute><SubjectsPage /></ProtectedRoute>} />
+            <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
+            <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
+            <Route path="/student-registrations" element={<ProtectedRoute><StudentRegistrationsPage /></ProtectedRoute>} />
+            <Route path="/class-management/:bookingId" element={<ProtectedRoute><ClassManagementPage /></ProtectedRoute>} />
+            <Route path="/financial-reports" element={<ProtectedRoute><ClassFinancialReportsPage /></ProtectedRoute>} />
+            <Route path="/admin-privileges" element={<ProtectedRoute><AdminPrivilegesPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+            <Route path="/audit-logs" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
+            <Route path="/diagnostics" element={<ProtectedRoute><DiagnosticsPage /></ProtectedRoute>} />
+            <Route path="/style-showcase" element={<ProtectedRoute><StyleShowcase /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -12,6 +12,8 @@ import {
   X,
   LogOut,
   Shield,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +25,14 @@ import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect } from "react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface NavigationGroup {
   title: string;
@@ -218,6 +228,46 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
     return () => body.classList.remove("overflow-hidden");
   }, [sidebarOpen]);
 
+  // Generate breadcrumbs from current path
+  const getBreadcrumbs = () => {
+    const path = location.pathname;
+    const segments = path.split('/').filter(Boolean);
+    
+    // Find the current page in navigation
+    let currentPage = null;
+    for (const group of navGroups) {
+      const found = group.items.find(item => item.url === path);
+      if (found) {
+        currentPage = found;
+        break;
+      }
+    }
+
+    if (path === '/') {
+      return [{ title: 'الرئيسية', url: '/' }];
+    }
+
+    const breadcrumbs = [{ title: 'الرئيسية', url: '/' }];
+    
+    if (currentPage) {
+      breadcrumbs.push({ title: currentPage.title, url: currentPage.url });
+    } else if (segments.length > 0) {
+      // Handle dynamic routes like /class-management/:id
+      const baseSegment = segments[0];
+      for (const group of navGroups) {
+        const found = group.items.find(item => item.url.includes(baseSegment));
+        if (found) {
+          breadcrumbs.push({ title: found.title, url: found.url });
+          break;
+        }
+      }
+    }
+
+    return breadcrumbs;
+  };
+
+  const breadcrumbs = getBreadcrumbs();
+
   const getRoleBadge = (role?: string) => {
     switch (role) {
       case "owner":
@@ -242,6 +292,12 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
         return (
           <Badge variant="outline" className="text-xs">
             قراءة فقط
+          </Badge>
+        );
+      case "teacher":
+        return (
+          <Badge variant="outline" className="text-xs">
+            معلم
           </Badge>
         );
       default:
@@ -379,7 +435,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:mr-72">
-        {/* Top Header - with integrated burger on mobile */}
+        {/* Top Header - with breadcrumbs and navigation buttons */}
         <header className="flex h-14 sm:h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-md px-4 sticky top-0 z-40">
           <div className="flex flex-1 items-center justify-between">
             <div className="flex items-center gap-2">
@@ -392,7 +448,53 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">فتح القائمة</span>
               </Button>
-              <h1 className="text-lg sm:text-xl font-bold text-primary">Science Club</h1>
+              
+              {/* Navigation buttons for desktop */}
+              <div className="hidden md:flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.history.back()}
+                  className="h-8 w-8 p-0"
+                  title="رجوع"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.history.forward()}
+                  className="h-8 w-8 p-0"
+                  title="تقدم"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Breadcrumbs */}
+              <Breadcrumb className="hidden md:flex">
+                <BreadcrumbList>
+                  {breadcrumbs.map((crumb, index) => (
+                    <div key={crumb.url} className="flex items-center gap-2">
+                      {index > 0 && <BreadcrumbSeparator />}
+                      <BreadcrumbItem>
+                        {index === breadcrumbs.length - 1 ? (
+                          <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink 
+                            className="cursor-pointer hover:text-primary"
+                            onClick={() => navigate(crumb.url)}
+                          >
+                            {crumb.title}
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </div>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
+
+              <h1 className="text-lg sm:text-xl font-bold text-primary md:hidden">Science Club</h1>
             </div>
             <div className="flex items-center gap-2">
               <NotificationBell />
