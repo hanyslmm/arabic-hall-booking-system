@@ -36,8 +36,10 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
           userName={profile?.full_name || profile?.email || undefined}
           isAdmin={isAdmin}
         />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-muted/40 p-4 pt-20 md:p-6 lg:p-8 sm:pt-6">
-          {isIndexPage ? <TeacherDashboard /> : children}
+        <main className="flex-1 overflow-y-auto bg-muted/40">
+          <div className="container mx-auto px-4 py-6 pt-20 sm:pt-6">
+            {isIndexPage ? <TeacherDashboard /> : children}
+          </div>
         </main>
       </>
     );
@@ -51,8 +53,10 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
         userName={profile?.full_name || profile?.email || undefined}
         isAdmin={isAdmin}
       />
-      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-muted/40 p-4 pt-20 md:p-6 lg:p-8 sm:pt-6">
-        {isIndexPage ? <ReceptionistDashboard /> : children}
+      <main className="flex-1 overflow-y-auto bg-muted/40">
+        <div className="container mx-auto px-4 py-6 pt-20 sm:pt-6">
+          {isIndexPage ? <ReceptionistDashboard /> : children}
+        </div>
       </main>
     </>
   );
