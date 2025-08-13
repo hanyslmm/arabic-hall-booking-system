@@ -113,22 +113,39 @@ export const AdminDataDiagnostic = () => {
 
       // Test 4: Admin permissions
       if (session?.user) {
-        const { data: adminTest, error: adminError } = await supabase
-          .rpc('is_admin_user');
+        // Try the new function first, then fall back to the legacy one
+        let adminCheckFunctionUsed = 'check_user_admin_status';
+        let adminResult: boolean | null = null;
+        let primaryError: any = null;
+        let fallbackError: any = null;
 
-        if (adminError) {
+        const { data: adminTestV2, error: adminErrorV2 } = await supabase.rpc('check_user_admin_status');
+        if (adminErrorV2) {
+          primaryError = adminErrorV2;
+          adminCheckFunctionUsed = 'is_admin_user';
+          const { data: adminTestLegacy, error: adminErrorLegacy } = await supabase.rpc('is_admin_user');
+          if (adminErrorLegacy) {
+            fallbackError = adminErrorLegacy;
+          } else {
+            adminResult = Boolean(adminTestLegacy);
+          }
+        } else {
+          adminResult = Boolean(adminTestV2);
+        }
+
+        if (adminResult === null) {
           results.push({
             name: "Admin Permissions",
             status: 'error',
-            message: `Admin check failed: ${adminError.message}`,
-            details: adminError
+            message: `Admin check failed: ${primaryError?.message || 'Unknown error'}`,
+            details: { primaryError, fallbackError }
           });
         } else {
           results.push({
             name: "Admin Permissions",
-            status: adminTest ? 'success' : 'warning',
-            message: adminTest ? "Admin permissions confirmed" : "User does not have admin permissions",
-            details: { isAdmin: adminTest }
+            status: adminResult ? 'success' : 'warning',
+            message: adminResult ? "Admin permissions confirmed" : "User does not have admin permissions",
+            details: { isAdmin: adminResult, function: adminCheckFunctionUsed }
           });
         }
       }
