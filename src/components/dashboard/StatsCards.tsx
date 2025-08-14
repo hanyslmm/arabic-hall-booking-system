@@ -1,51 +1,84 @@
 // src/components/dashboard/StatsCards.tsx
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../integrations/supabase/client'; // Adjusted path for clarity
+import { supabase } from '../../integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { fetchMonthlyEarnings } from '@/utils/finance';
 
-// STEP 1: Define the props for this component.
-// It now expects to receive 'selectedMonth' from its parent.
 interface StatsCardsProps {
-  selectedMonth: Date;
+  selectedMonth: number; // 1-12
+  selectedYear: number;  // four-digit year
 }
 
-const StatsCards = ({ selectedMonth }: StatsCardsProps) => {
+const StatsCards = ({ selectedMonth, selectedYear }: StatsCardsProps) => {
   const [stats, setStats] = useState({ totalIncome: 0, totalExpenses: 0, occupancy: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // STEP 2: Add 'selectedMonth' to the dependency array of useEffect.
-  // This tells React to re-run this entire function whenever selectedMonth changes.
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       setError(null);
 
-      // Format the date into 'YYYY-MM-01' to match what the database function expects.
-      const year = selectedMonth.getFullYear();
-      const month = selectedMonth.getMonth() + 1; // JS months are 0-11
-      const formattedMonth = `${year}-${month.toString().padStart(2, '0')}-01`;
-
       try {
-        // STEP 3: Pass the formatted month as a parameter to the database function.
-        // This is the most important change. The query is now dynamic.
-        const { data, error } = await supabase.rpc('get_financial_summary', {
-          p_month: formattedMonth
-        });
+        // Try server RPC first if available
+        const formattedMonth = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        let occupancy = 0;
 
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setStats({
-            totalIncome: data.total_income || 0,
-            totalExpenses: data.total_expenses || 0,
-            occupancy: data.occupancy_rate || 0,
+        try {
+          const { data, error } = await supabase.rpc('get_financial_summary', {
+            p_month: formattedMonth,
           });
+          if (error) throw error;
+          if (data) {
+            totalIncome = Number(data.total_income || 0);
+            totalExpenses = Number(data.total_expenses || 0);
+            occupancy = Number(data.occupancy_rate || 0);
+          }
+        } catch (_) {
+          // Fallback path if RPC is missing or fails
+          // 1) Income via existing robust RPC get_payments_sum
+          totalIncome = await fetchMonthlyEarnings(selectedMonth, selectedYear);
+          totalExpenses = 0; // No expenses table yet
+
+          // 2) Occupancy: proportion of halls that have at least one booking overlapping the month
+          const startOfMonth = new Date(selectedYear, selectedMonth - 1, 1);
+          const endOfMonthExclusive = new Date(selectedYear, selectedMonth, 1);
+          const startStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`;
+          const endStr = `${endOfMonthExclusive.getFullYear()}-${String(endOfMonthExclusive.getMonth() + 1).padStart(2, '0')}-${String(endOfMonthExclusive.getDate()).padStart(2, '0')}`;
+
+          // Count halls
+          const { count: hallsCount } = await supabase
+            .from('halls')
+            .select('id', { count: 'exact', head: true });
+
+          // Fetch bookings that could overlap this month (start_date <= endOfMonth)
+          const { data: bookingsData, error: bookingsError } = await supabase
+            .from('bookings')
+            .select('hall_id, start_date, end_date, status')
+            .lte('start_date', endStr);
+
+          if (bookingsError) throw bookingsError;
+
+          const activeOverlapping = (bookingsData || []).filter((b: any) => {
+            if (b.status && String(b.status).toLowerCase() === 'cancelled') return false;
+            const endDate = b.end_date ? new Date(b.end_date) : null;
+            // Overlap if booking has no end or ends on/after start of month
+            return !endDate || endDate >= startOfMonth;
+          });
+
+          const uniqueHallIds = new Set<string>(activeOverlapping.map((b: any) => b.hall_id));
+          occupancy = hallsCount && hallsCount > 0 ? (uniqueHallIds.size / hallsCount) * 100 : 0;
         }
+
+        setStats({
+          totalIncome,
+          totalExpenses,
+          occupancy,
+        });
       } catch (err: any) {
         console.error('Error fetching financial summary:', err);
         setError('Could not load stats.');
@@ -55,7 +88,7 @@ const StatsCards = ({ selectedMonth }: StatsCardsProps) => {
     };
 
     fetchStats();
-  }, [selectedMonth]); // The dependency array is no longer empty.
+  }, [selectedMonth, selectedYear]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' }).format(value);

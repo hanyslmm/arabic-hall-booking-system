@@ -21,7 +21,7 @@ BEGIN
     RETURN QUERY
     SELECT
         -- Calculate total income for the month
-        COALESCE(SUM(p.amount), 0)::numeric AS total_income,
+        COALESCE(SUM(pr.amount), 0)::numeric AS total_income,
         
         -- Calculate total expenses for the month (placeholder, as there is no expenses table)
         0::numeric AS total_expenses,
@@ -37,8 +37,8 @@ BEGIN
         )::numeric AS occupancy_rate
 
     FROM
-        public.payments p
+        public.payment_records pr
     WHERE
-        p.payment_date >= start_date AND p.payment_date < end_date;
+        pr.payment_date >= start_date AND pr.payment_date < end_date;
 END;
 $$;
