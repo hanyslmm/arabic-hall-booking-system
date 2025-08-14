@@ -118,6 +118,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           if (updateError) {
             console.error("Error upgrading admin role:", updateError);
+            // Try to call the verify_admin_access function to check permissions
+            const { data: accessCheck } = await supabase.rpc('verify_admin_access');
+            if (accessCheck && accessCheck[0]) {
+              console.log("Admin access verification:", accessCheck[0]);
+            }
             setProfile(data); // Use original profile if update fails
           } else {
             console.log("✓ Admin user upgraded to owner role successfully");
