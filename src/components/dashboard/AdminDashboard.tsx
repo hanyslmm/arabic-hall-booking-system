@@ -7,6 +7,8 @@ import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { HallsGrid } from "@/components/dashboard/HallsGrid";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminDataDiagnostic } from "@/components/AdminDataDiagnostic";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -28,6 +30,69 @@ export function AdminDashboard() {
     setSelectedMonth(month);
     setSelectedYear(year);
   };
+
+  // Fetch per-hall occupancy for the grid (RPC first, then fallback)
+  const { data: occupancyData } = useQuery({
+    queryKey: ['hall-occupancy-dashboard'],
+    queryFn: async () => {
+      // Try RPCs that may exist in the database
+      try {
+        const { data, error } = await supabase.rpc('get_hall_actual_occupancy_updated');
+        if (error) throw error;
+        if (data) {
+          return (data as any[]).map((row) => ({
+            hall_id: row.hall_id,
+            name: row.hall_name ?? row.name ?? '',
+            occupancy_percentage: Number(row.occupancy_percentage ?? 0),
+          }));
+        }
+      } catch (_) {
+        // noop -> fallback
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('get_hall_occupancy_rates');
+        if (error) throw error;
+        if (data) {
+          return (data as any[]).map((row) => ({
+            hall_id: row.hall_id,
+            name: row.name ?? '',
+            occupancy_percentage: Number(row.occupancy_percentage ?? 0),
+          }));
+        }
+      } catch (_) {
+        // noop -> fallback
+      }
+
+      // Final fallback: compute occupancy from active bookings and actual registrations
+      const { data, error } = await supabase
+        .from('halls')
+        .select(`
+          id,
+          name,
+          capacity,
+          bookings!inner(
+            id,
+            student_registrations(count)
+          )
+        `)
+        .eq('bookings.status', 'active');
+
+      if (error) throw error;
+
+      return (data || []).map((hall: any) => {
+        const registeredStudents = (hall.bookings || []).reduce((total: number, booking: any) => {
+          const bookingStudents = booking.student_registrations?.length || 0;
+          return total + bookingStudents;
+        }, 0);
+        const activeBookings = (hall.bookings || []).length;
+        const totalCapacity = activeBookings > 0 ? hall.capacity * activeBookings : hall.capacity;
+        const percentage = totalCapacity > 0 ? Math.round((registeredStudents / totalCapacity) * 100) : 0;
+        return { hall_id: hall.id, name: hall.name, occupancy_percentage: percentage };
+      });
+    },
+    staleTime: 30_000,
+  });
 
   return (
     <div className="space-y-8">
@@ -62,7 +127,7 @@ export function AdminDashboard() {
 
       <StatsCards selectedMonth={selectedMonth} selectedYear={selectedYear} />
 
-      <HallsGrid />
+      <HallsGrid occupancyData={occupancyData || []} />
 
       <FastReceptionistModal 
         isOpen={isFastReceptionistOpen} 

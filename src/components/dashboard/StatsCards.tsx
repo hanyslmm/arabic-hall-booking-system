@@ -91,7 +91,8 @@ const StatsCards = ({ selectedMonth, selectedYear }: StatsCardsProps) => {
   }, [selectedMonth, selectedYear]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' }).format(value);
+    // Use English digits formatting and append Arabic currency label for consistency with reports page
+    return `${Number(value || 0).toLocaleString('en-EG')} جنيه`;
   };
 
   if (loading) return <div>Loading stats...</div>;
