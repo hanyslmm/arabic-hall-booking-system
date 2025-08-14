@@ -61,25 +61,27 @@ const HallsPage = () => {
       
       if (error) throw error;
       
-      // Process the data to calculate occupancy
-      return data.map(hall => {
-        // Calculate total registered students across all active bookings for this hall
-        const registeredStudents = hall.bookings.reduce((total, booking) => {
-          // Count actual student registrations for this booking
-          const bookingStudents = booking.student_registrations?.length || 0;
-          return total + bookingStudents;
-        }, 0);
-        
-        // Calculate occupancy as average across time slots
-        const activeBookings = hall.bookings.length;
+      const getCount = (sr: any) => {
+        if (typeof sr === 'number') return sr;
+        if (Array.isArray(sr)) return Number(sr[0]?.count ?? 0);
+        if (sr && typeof sr === 'object') return Number(sr.count ?? 0);
+        return 0;
+      };
+
+      // Process the data to calculate occupancy per slot and average it
+      return data.map((hall) => {
+        const activeBookings = (hall.bookings || []).length;
+        const studentsAcrossBookings = (hall.bookings || []).reduce((total, booking) => total + getCount(booking.student_registrations), 0);
         const totalCapacity = activeBookings > 0 ? hall.capacity * activeBookings : hall.capacity;
+        const rawPercentage = totalCapacity > 0 ? (studentsAcrossBookings / totalCapacity) * 100 : 0;
+        const occupancyPercentage = Math.max(0, Math.min(100, Number(rawPercentage.toFixed(1))));
         
         return {
           hall_id: hall.id,
           hall_name: hall.name,
           capacity: hall.capacity,
-          registered_students: registeredStudents,
-          occupancy_percentage: totalCapacity > 0 ? Math.round((registeredStudents / totalCapacity) * 100) : 0
+          registered_students: studentsAcrossBookings,
+          occupancy_percentage: occupancyPercentage
         };
       });
     }
@@ -87,11 +89,10 @@ const HallsPage = () => {
 
   const getOccupancyForHall = (hallId: string): { registered: number; capacity: number; percentage: number } => {
     const occupancy = hallOccupancy?.find(item => item.hall_id === hallId);
-    return {
-      registered: occupancy?.registered_students || 0,
-      capacity: occupancy?.capacity || 0,
-      percentage: occupancy?.occupancy_percentage || 0
-    };
+    const registered = Number(occupancy?.registered_students || 0);
+    const capacity = Number(occupancy?.capacity || 0);
+    const percentage = Math.max(0, Math.min(100, Number(occupancy?.occupancy_percentage || 0)));
+    return { registered, capacity, percentage };
   };
 
   const getCapacityVariant = (capacity: number) => {

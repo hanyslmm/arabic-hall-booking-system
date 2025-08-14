@@ -35,7 +35,27 @@ export function AdminDashboard() {
   const { data: occupancyData } = useQuery({
     queryKey: ['hall-occupancy-dashboard'],
     queryFn: async () => {
-      // Try RPCs that may exist in the database
+      const clampPercentage = (value: number) => {
+        if (!isFinite(value) || isNaN(value)) return 0;
+        return Math.max(0, Math.min(100, Number(value)));
+      };
+
+      // Preferred: average occupancy per time slot if RPC exists
+      try {
+        const { data, error } = await supabase.rpc('get_hall_average_occupancy_per_slot');
+        if (error) throw error;
+        if (data) {
+          return (data as any[]).map((row) => ({
+            hall_id: row.hall_id,
+            name: row.hall_name ?? row.name ?? '',
+            occupancy_percentage: clampPercentage(Number(row.occupancy_percentage ?? 0)),
+          }));
+        }
+      } catch (_) {
+        // noop -> fallback
+      }
+
+      // Fallback: server function that might overcount; clamp for safety
       try {
         const { data, error } = await supabase.rpc('get_hall_actual_occupancy_updated');
         if (error) throw error;
@@ -43,28 +63,14 @@ export function AdminDashboard() {
           return (data as any[]).map((row) => ({
             hall_id: row.hall_id,
             name: row.hall_name ?? row.name ?? '',
-            occupancy_percentage: Number(row.occupancy_percentage ?? 0),
+            occupancy_percentage: clampPercentage(Number(row.occupancy_percentage ?? 0)),
           }));
         }
       } catch (_) {
         // noop -> fallback
       }
 
-      try {
-        const { data, error } = await supabase.rpc('get_hall_occupancy_rates');
-        if (error) throw error;
-        if (data) {
-          return (data as any[]).map((row) => ({
-            hall_id: row.hall_id,
-            name: row.name ?? '',
-            occupancy_percentage: Number(row.occupancy_percentage ?? 0),
-          }));
-        }
-      } catch (_) {
-        // noop -> fallback
-      }
-
-      // Final fallback: compute occupancy from active bookings and actual registrations
+      // Final fallback: compute using active bookings and registration counts
       const { data, error } = await supabase
         .from('halls')
         .select(`
@@ -80,15 +86,19 @@ export function AdminDashboard() {
 
       if (error) throw error;
 
+      const getCount = (sr: any) => {
+        if (typeof sr === 'number') return sr;
+        if (Array.isArray(sr)) return Number(sr[0]?.count ?? 0);
+        if (sr && typeof sr === 'object') return Number(sr.count ?? 0);
+        return 0;
+      };
+
       return (data || []).map((hall: any) => {
-        const registeredStudents = (hall.bookings || []).reduce((total: number, booking: any) => {
-          const bookingStudents = booking.student_registrations?.length || 0;
-          return total + bookingStudents;
-        }, 0);
         const activeBookings = (hall.bookings || []).length;
-        const totalCapacity = activeBookings > 0 ? hall.capacity * activeBookings : hall.capacity;
-        const percentage = totalCapacity > 0 ? Math.round((registeredStudents / totalCapacity) * 100) : 0;
-        return { hall_id: hall.id, name: hall.name, occupancy_percentage: percentage };
+        const studentsAcrossBookings = (hall.bookings || []).reduce((sum: number, booking: any) => sum + getCount(booking.student_registrations), 0);
+        const denom = activeBookings > 0 ? hall.capacity * activeBookings : hall.capacity;
+        const percentage = denom > 0 ? (studentsAcrossBookings / denom) * 100 : 0;
+        return { hall_id: hall.id, name: hall.name, occupancy_percentage: clampPercentage(Number(percentage.toFixed(1))) };
       });
     },
     staleTime: 30_000,

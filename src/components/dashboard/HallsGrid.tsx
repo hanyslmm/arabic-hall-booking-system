@@ -50,7 +50,9 @@ export const HallsGrid = ({ occupancyData }: HallsGridProps) => {
 
   const getOccupancyForHall = (hallId: string): number => {
     const hallOccupancy = occupancyData?.find(item => item.hall_id === hallId);
-    return hallOccupancy?.occupancy_percentage || 0;
+    const raw = Number(hallOccupancy?.occupancy_percentage || 0);
+    const clamped = Math.max(0, Math.min(100, isFinite(raw) ? raw : 0));
+    return Number(clamped.toFixed(1));
   };
 
   const getOccupancyColor = (percentage: number): string => {
