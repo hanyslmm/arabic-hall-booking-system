@@ -18,6 +18,7 @@ import { ArrowLeft, Plus, Save, DollarSign, Users, Calendar, Upload, Trash2, Edi
 import { bookingsApi } from '@/api/bookings';
 import { studentRegistrationsApi, paymentsApi } from '@/api/students';
 import { studentsApi } from '@/api/students';
+import { attendanceApi } from '@/api/students';
 import { BulkUploadModal } from '@/components/student/BulkUploadModal';
 import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
@@ -57,6 +58,8 @@ export default function ClassManagementPage() {
   const [editingFees, setEditingFees] = useState<Record<string, number>>({});
   const [isApplyingAll, setIsApplyingAll] = useState(false);
   const [viewingStudentDetails, setViewingStudentDetails] = useState<any | null>(null);
+  const todayISO = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(todayISO);
 
   // Fetch booking details
   const { data: booking, isLoading: isLoadingBooking } = useQuery({
@@ -70,6 +73,45 @@ export default function ClassManagementPage() {
     queryKey: ['registrations', bookingId],
     queryFn: () => studentRegistrationsApi.getByBooking(bookingId!),
     enabled: !!bookingId,
+  });
+
+  const registrationIds = (registrations || []).map(r => r.id);
+
+  // Helper to convert date string to weekday key used in bookings.days_of_week
+  const getWeekdayKey = (dateString: string) => {
+    const d = new Date(dateString);
+    const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    return days[d.getDay()];
+  };
+  const selectedWeekday = getWeekdayKey(selectedDate);
+
+  // Fetch attendance for selected date across all registrations in this class
+  const { data: attendanceForDate } = useQuery({
+    queryKey: ['attendance-by-date', bookingId, selectedDate],
+    queryFn: async () => {
+      if (!registrationIds || registrationIds.length === 0) return [] as any[];
+      return await attendanceApi.getByRegistrationIdsAndDate(registrationIds, selectedDate);
+    },
+    enabled: !!bookingId && !!registrations && registrationIds.length > 0,
+    staleTime: 30_000,
+  });
+
+  const attendanceMap: Record<string, 'present' | 'absent' | 'late' | 'excused' | undefined> = {};
+  (attendanceForDate || []).forEach((rec: any) => {
+    attendanceMap[rec.student_registration_id] = rec.status;
+  });
+
+  const markAttendanceMutation = useMutation({
+    mutationFn: async (args: { registrationId: string; status: 'present' | 'absent' }) => {
+      return await attendanceApi.markStatusForDate(args.registrationId, selectedDate, args.status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-by-date', bookingId, selectedDate] });
+      toast({ title: 'تم حفظ الحضور' });
+    },
+    onError: () => {
+      toast({ title: 'تعذر حفظ الحضور', variant: 'destructive' });
+    }
   });
 
   // Unified count of students in class (source of truth: student_registrations)
@@ -440,7 +482,13 @@ export default function ClassManagementPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium">الأيام</Label>
-                <p className="text-lg">{booking.days_of_week?.join(', ')}</p>
+                <p className="text-lg">
+                  {booking.days_of_week?.map((d: string) => (
+                    <Badge key={d} variant={d === selectedWeekday ? 'default' : 'secondary'} className="ml-1">
+                      {d}
+                    </Badge>
+                  ))}
+                </p>
               </div>
               <div>
                 <Label className="text-sm font-medium">رسوم المجموعة</Label>
@@ -449,6 +497,29 @@ export default function ClassManagementPage() {
               <div>
                 <Label className="text-sm font-medium">عدد الطلاب</Label>
                 <p className="text-lg">{actualStudentCount ?? 0} طالب</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Daily Attendance Controls */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              الحضور اليومي
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <Label className="text-sm">اختر التاريخ</Label>
+                <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+              </div>
+              <div className="mt-6">
+                <Badge variant={booking.days_of_week?.includes(selectedWeekday) ? 'success' as any : 'warning' as any}>
+                  {booking.days_of_week?.includes(selectedWeekday) ? 'هذا اليوم ضمن جدول الحصة' : 'هذا اليوم خارج الجدول'}
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -572,6 +643,10 @@ export default function ClassManagementPage() {
                       <SelectItem value="pending">غير مدفوع</SelectItem>
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">تاريخ الحضور</Label>
+                    <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-44" />
+                  </div>
                   {selectedStudents.size > 0 && (
                     <Button 
                       variant="destructive" 
@@ -601,6 +676,8 @@ export default function ClassManagementPage() {
                         <th className="text-right p-3">الرسوم</th>
                         <th className="text-right p-3">المدفوع</th>
                         <th className="text-right p-3">حالة الدفع</th>
+                        <th className="text-right p-3">الجدول</th>
+                        <th className="text-right p-3">حضور اليوم</th>
                         <th className="text-center p-3">إجراءات</th>
                       </tr>
                     </thead>
@@ -647,6 +724,27 @@ export default function ClassManagementPage() {
                               {registration.payment_status === 'paid' ? 'مدفوع' :
                                registration.payment_status === 'partial' ? 'جزئي' : 'غير مدفوع'}
                             </Badge>
+                          </td>
+                          <td className="p-3">
+                            {booking?.days_of_week?.includes(selectedWeekday) ? (
+                              <Badge variant="success" className="text-xs">ضمن الجدول</Badge>
+                            ) : (
+                              <Badge variant="warning" className="text-xs">خارج الجدول</Badge>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant={attendanceMap[registration.id] === 'present' ? 'default' : 'outline'}
+                                onClick={() => markAttendanceMutation.mutate({ registrationId: registration.id, status: 'present' })}
+                              >حاضر</Button>
+                              <Button
+                                size="sm"
+                                variant={attendanceMap[registration.id] === 'absent' ? 'destructive' : 'outline'}
+                                onClick={() => markAttendanceMutation.mutate({ registrationId: registration.id, status: 'absent' })}
+                              >غائب</Button>
+                            </div>
                           </td>
                           <td className="p-3 text-center">
                             <Button

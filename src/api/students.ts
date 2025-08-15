@@ -507,6 +507,61 @@ export const attendanceApi = {
     
     if (error) throw error;
     return data as AttendanceRecord[];
+  },
+
+  // Fetch attendance records for a set of registration IDs on a specific date
+  async getByRegistrationIdsAndDate(registrationIds: string[], attendanceDate: string): Promise<AttendanceRecord[]> {
+    if (!registrationIds || registrationIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .eq('attendance_date', attendanceDate)
+      .in('student_registration_id', registrationIds);
+    if (error) throw error;
+    return (data as AttendanceRecord[]) || [];
+  },
+
+  // Upsert attendance status for a registration on a specific date
+  async markStatusForDate(
+    registrationId: string,
+    attendanceDate: string,
+    status: 'present' | 'absent' | 'late' | 'excused'
+  ): Promise<AttendanceRecord> {
+    // Check if a record exists for this registration and date
+    const { data: existing, error: selectError } = await supabase
+      .from('attendance_records')
+      .select('id, status')
+      .eq('student_registration_id', registrationId)
+      .eq('attendance_date', attendanceDate)
+      .maybeSingle();
+    if (selectError) throw selectError;
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .update({ status })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as AttendanceRecord;
+    }
+
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error("غير مصرح");
+
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .insert([{ 
+        student_registration_id: registrationId,
+        attendance_date: attendanceDate,
+        status,
+        created_by: user.user.id,
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as AttendanceRecord;
   }
 };
 

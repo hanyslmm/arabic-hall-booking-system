@@ -170,6 +170,12 @@ const StudentsPage = () => {
       size: 'sm',
       icon: <QrCode className="h-4 w-4" />,
     },
+    {
+      label: 'الملف',
+      onClick: (student) => window.open(`/students/${student.id}`, '_blank'),
+      variant: 'outline',
+      size: 'sm',
+    },
   ];
 
   const manageActions: TableAction<Student>[] = canManageStudents ? [

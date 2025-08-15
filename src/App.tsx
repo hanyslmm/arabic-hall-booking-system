@@ -22,6 +22,8 @@ import StudentsPage from "./pages/StudentsPage";
 import StudentRegistrationsPage from "./pages/StudentRegistrationsPage";
 import ClassManagementPage from "./pages/ClassManagementPage";
 import ClassFinancialReportsPage from "./pages/ClassFinancialReportsPage";
+import StudentProfilePage from "./pages/StudentProfilePage";
+import StudentIdCardPage from "./pages/StudentIdCardPage";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import AdminPrivilegesPage from "./pages/AdminPrivilegesPage";
@@ -155,6 +157,8 @@ const App = () => {
                 <Route path="subjects" element={<SubjectsPage />} />
                 <Route path="bookings" element={<BookingsPage />} />
                 <Route path="students" element={<StudentsPage />} />
+                <Route path="students/:studentId" element={<StudentProfilePage />} />
+                <Route path="students/:studentId/print-card" element={<StudentIdCardPage />} />
                 <Route path="student-registrations" element={<StudentRegistrationsPage />} />
                 <Route path="class-management/:bookingId" element={<ClassManagementPage />} />
                 <Route path="financial-reports" element={<ClassFinancialReportsPage />} />
