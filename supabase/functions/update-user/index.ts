@@ -55,6 +55,9 @@ serve(async (req) => {
       );
     }
 
+    const isActorOwner = profile?.user_role === 'owner';
+    console.log('Actor info:', { actorUserId: user.id, actorRole: profile?.user_role });
+
     // Parse request body
     const requestBody = await req.json();
     console.log('Update user request:', requestBody);
@@ -92,6 +95,8 @@ serve(async (req) => {
       );
     }
 
+    console.log('Target profile fetched:', { targetUserId: targetProfile.id, currentRole: targetProfile.user_role });
+
     const SYSTEM_ADMIN_ID = '00000000-0000-0000-0000-000000000001';
     const isSystemAdmin = targetProfile.id === SYSTEM_ADMIN_ID || (targetProfile.role as unknown as string) === 'ADMIN';
 
@@ -124,13 +129,19 @@ serve(async (req) => {
     // Update the user's profile with all provided fields
     const profileUpdateData: any = {};
 
-    // Role change guard: prevent demoting system admin to non-admin roles
+    // Role change guard: prevent demoting system admin to non-admin roles and restrict who can change roles
     if (user_role !== undefined) {
+      if (!isActorOwner) {
+        return new Response(
+          JSON.stringify({ error: 'Only owners can change user roles' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       if (isSystemAdmin) {
         // Keep system admin as owner regardless of requested role
         profileUpdateData.user_role = 'owner';
       } else {
-        // Allow role changes for space_manager - no restrictions on promoting to space_manager
+        // Allow changing to requested role (including space_manager)
         profileUpdateData.user_role = user_role;
       }
     }
@@ -152,6 +163,14 @@ serve(async (req) => {
 
     if (Object.keys(profileUpdateData).length > 0) {
       console.log('Updating profile with data:', profileUpdateData);
+      console.log('Calling admin_update_user_role with:', {
+        target_user_id: userId,
+        new_user_role: profileUpdateData.user_role || null,
+        new_full_name: profileUpdateData.full_name || null,
+        new_email: profileUpdateData.email || null,
+        new_phone: profileUpdateData.phone || null,
+        new_teacher_id: profileUpdateData.teacher_id || null
+      });
       
       // Use the admin function that bypasses the trigger for authorized admin operations
       const { data: updatedProfile, error: profileUpdateError } = await supabaseClient
@@ -165,9 +184,20 @@ serve(async (req) => {
         });
 
       if (profileUpdateError) {
-        console.error('Error updating profile:', profileUpdateError);
+        console.error('Error updating profile:', {
+          message: profileUpdateError.message,
+          code: (profileUpdateError as any).code,
+          details: (profileUpdateError as any).details,
+          hint: (profileUpdateError as any).hint
+        });
         return new Response(
-          JSON.stringify({ error: 'Failed to update user profile', details: profileUpdateError.message }),
+          JSON.stringify({ 
+            error: 'Failed to update user profile', 
+            details: profileUpdateError.message,
+            code: (profileUpdateError as any).code,
+            db_details: (profileUpdateError as any).details,
+            hint: (profileUpdateError as any).hint
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

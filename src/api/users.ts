@@ -89,31 +89,31 @@ export const createUser = async (userData: CreateUserData): Promise<UserProfile>
 };
 
 export const updateUser = async (userId: string, userData: UpdateUserData): Promise<UserProfile> => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({
-      full_name: userData.full_name,
-      phone: userData.phone,
-      email: userData.email,
-user_role: userData.user_role,
-teacher_id: (userData as any).teacher_id,
-    })
-    .eq("id", userId)
-    .select()
-    .single();
-  if (error) throw error;
-  return { ...data, phone: userData.phone || null } as UserProfile;
+  const body: any = {
+    userId,
+    full_name: userData.full_name,
+    phone: userData.phone,
+    email: userData.email,
+    user_role: userData.user_role,
+  };
+  if ((userData as any).teacher_id !== undefined) {
+    body.teacher_id = (userData as any).teacher_id;
+  }
+  if (userData.password && userData.password.trim() !== '') {
+    body.password = userData.password;
+  }
+
+  const response = await supabase.functions.invoke('update-user', { body });
+  if (response.error) throw response.error;
+  return response.data.user as UserProfile;
 };
 
 export const updateUserRole = async (userId: string, newRole: 'owner' | 'manager' | 'space_manager' | 'teacher') => {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ user_role: newRole })
-    .eq("id", userId)
-    .select()
-    .single();
-  if (error) throw error;
-  return { ...data, phone: null } as UserProfile;
+  const response = await supabase.functions.invoke('update-user', {
+    body: { userId, user_role: newRole }
+  });
+  if (response.error) throw response.error;
+  return response.data.user as UserProfile;
 };
 
 export const deleteUser = async (userId: string) => {

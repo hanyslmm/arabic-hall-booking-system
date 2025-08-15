@@ -6,6 +6,11 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 BEGIN
+  -- Allow privileged calls to bypass this guard (e.g., via admin_update_user_role)
+  IF current_setting('app.bypass_role_guard', true) = 'on' THEN
+    RETURN NEW;
+  END IF;
+
   IF TG_OP = 'UPDATE' THEN
     IF COALESCE(NEW.role, 'USER'::app_role) IS DISTINCT FROM OLD.role
        OR COALESCE(NEW.user_role, 'space_manager'::user_role) IS DISTINCT FROM OLD.user_role THEN

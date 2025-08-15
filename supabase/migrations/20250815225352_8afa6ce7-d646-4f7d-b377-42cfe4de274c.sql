@@ -15,6 +15,9 @@ AS $$
 DECLARE
   updated_profile profiles;
 BEGIN
+  -- Signal triggers to bypass role-change guard for this privileged operation
+  PERFORM set_config('app.bypass_role_guard', 'on', true);
+
   -- Direct update with elevated privileges, bypassing all triggers and RLS
   UPDATE profiles 
   SET 
