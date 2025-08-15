@@ -33,7 +33,6 @@ import DiagnosticsPage from "./pages/DiagnosticsPage";
 import { ReceptionistDashboard } from "./components/receptionist/ReceptionistDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import { AdminDashboard } from "./components/dashboard/AdminDashboard";
-import { AdminLayout } from "./components/layout/AdminLayout";
 import { ReactNode, Suspense, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -81,10 +80,11 @@ function RootRoute() {
     dashboard = <AdminDashboard />;
   }
 
-  return <UnifiedLayout>{dashboard}</UnifiedLayout>;
+  // Return just the dashboard; layout is applied at the router level
+  return <>{dashboard}</>;
 }
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
+function ProtectedLayout() {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -98,7 +98,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <UnifiedLayout>
-        {children}
+        <Outlet />
       </UnifiedLayout>
     </Suspense>
   );
@@ -142,37 +142,36 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<RootRoute />} />
               <Route path="/login" element={<LoginPage />} />
 
-              {/* Protected routes with unified navigation and logout */}
-              <Route path="/booking" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
-              <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-              <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
-              <Route path="/halls" element={<ProtectedRoute><HallsPage /></ProtectedRoute>} />
-              <Route path="/stages" element={<ProtectedRoute><StagesPage /></ProtectedRoute>} />
-              <Route path="/subjects" element={<ProtectedRoute><SubjectsPage /></ProtectedRoute>} />
-              <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
-              <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-              <Route path="/student-registrations" element={<ProtectedRoute><StudentRegistrationsPage /></ProtectedRoute>} />
-              <Route path="/class-management/:bookingId" element={<ProtectedRoute><ClassManagementPage /></ProtectedRoute>} />
-              <Route path="/financial-reports" element={<ProtectedRoute><ClassFinancialReportsPage /></ProtectedRoute>} />
-              <Route path="/admin-privileges" element={<ProtectedRoute><AdminPrivilegesPage /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-              <Route path="/audit-logs" element={<ProtectedRoute><AuditLogPage /></ProtectedRoute>} />
-              <Route path="/diagnostics" element={<ProtectedRoute><DiagnosticsPage /></ProtectedRoute>} />
-              <Route path="/style-showcase" element={<ProtectedRoute><StyleShowcase /></ProtectedRoute>} />
+              {/* Protected routes with a single, top-level layout */}
+              <Route element={<ProtectedLayout />}>
+                <Route index element={<RootRoute />} />
+                <Route path="booking" element={<BookingPage />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="teachers" element={<TeachersPage />} />
+                <Route path="halls" element={<HallsPage />} />
+                <Route path="stages" element={<StagesPage />} />
+                <Route path="subjects" element={<SubjectsPage />} />
+                <Route path="bookings" element={<BookingsPage />} />
+                <Route path="students" element={<StudentsPage />} />
+                <Route path="student-registrations" element={<StudentRegistrationsPage />} />
+                <Route path="class-management/:bookingId" element={<ClassManagementPage />} />
+                <Route path="financial-reports" element={<ClassFinancialReportsPage />} />
+                <Route path="admin-privileges" element={<AdminPrivilegesPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="audit-logs" element={<AuditLogPage />} />
+                <Route path="diagnostics" element={<DiagnosticsPage />} />
+                <Route path="style-showcase" element={<StyleShowcase />} />
 
-              {/* Admin Routes - removed since admin routes are handled in UnifiedLayout */}
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
+                {/* Catch-all inside protected layout */}
+                <Route path="*" element={<NotFound />} />
+              </Route>
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
         <GlobalNotifications />
-        <Toaster />
-        <Sonner />
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -1,3 +1,4 @@
+import React, { createContext, useContext } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { Home, Calendar, Users, Building2, GraduationCap, BookOpen, Settings, Shield, FileText, UserPlus, ClipboardList } from "lucide-react";
@@ -6,7 +7,11 @@ interface UnifiedLayoutProps {
   children: React.ReactNode;
 }
 
+// Prevent nested layouts from rendering duplicated chrome
+const LayoutAppliedContext = createContext<boolean>(false);
+
 export function UnifiedLayout({ children }: UnifiedLayoutProps) {
+  const isNested = useContext(LayoutAppliedContext);
   const { profile, isAdmin, isOwner, canManageUsers } = useAuth();
   
   const userRole = profile?.user_role;
@@ -99,15 +104,22 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
     appSubtitle = "لوحة مدير القاعات";
   }
 
+  // If layout already applied higher in the tree, render children only
+  if (isNested) {
+    return <>{children}</>;
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <AdminSidebar 
-        navigation={navigation as any} 
-        appTitle={appTitle} 
-        appSubtitle={appSubtitle}
-      >
-        {children}
-      </AdminSidebar>
-    </div>
+    <LayoutAppliedContext.Provider value={true}>
+      <div className="min-h-screen bg-background">
+        <AdminSidebar 
+          navigation={navigation as any} 
+          appTitle={appTitle} 
+          appSubtitle={appSubtitle}
+        >
+          {children}
+        </AdminSidebar>
+      </div>
+    </LayoutAppliedContext.Provider>
   );
 }
