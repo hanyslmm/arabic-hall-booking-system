@@ -321,84 +321,143 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
 
   // Sidebar content component (reusable for both mobile and desktop)
   const SidebarContent = () => (
-    <>
-      {/* Sidebar Header */}
-      <div className="flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4 border-b bg-card/90">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+    <div className="flex flex-col h-full bg-gradient-to-b from-card via-card/98 to-card/95">
+      {/* Sidebar Header - Enhanced with better visual hierarchy */}
+      <div className="flex h-16 sm:h-18 items-center justify-between px-4 sm:px-5 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-primary-foreground shadow-lg shadow-primary/20">
+            <Building2 className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold text-sm sm:text-base">{appTitle ?? 'نادي العلوم'}</span>
-            <span className="truncate text-xs text-muted-foreground hidden sm:block">{appSubtitle ?? 'لوحة التحكم الإدارية'}</span>
+          <div className="grid flex-1 text-left leading-tight">
+            <span className="truncate font-bold text-base sm:text-lg bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+              {appTitle ?? 'نادي العلوم'}
+            </span>
+            <span className="truncate text-xs text-muted-foreground/80 hidden sm:block">
+              {appSubtitle ?? 'لوحة التحكم الإدارية'}
+            </span>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={closeSidebar}
-          className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive lg:hidden"
+          className="h-9 w-9 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200 lg:hidden"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </Button>
       </div>
 
-      {/* Sidebar Content with improved scrolling */}
-      <ScrollArea className="flex-1 px-3 sm:px-4 py-4 h-[calc(100vh-14rem)] sm:h-[calc(100vh-16rem)]">
-        {navGroups.map((group) => (
-          <div key={group.title} className="mb-6">
-            <h3 className="mb-2 text-xs sm:text-sm font-semibold text-muted-foreground px-2">
+      {/* Sidebar Content with improved scrolling and spacing */}
+      <ScrollArea className="flex-1 px-3 sm:px-4 py-5 h-[calc(100vh-20rem)] sm:h-[calc(100vh-22rem)]">
+        {navGroups.map((group, groupIndex) => (
+          <div key={group.title} className={cn(
+            "mb-7 pb-5",
+            groupIndex < navGroups.length - 1 && "border-b border-border/30"
+          )}>
+            <h3 className="mb-3 text-xs sm:text-sm font-bold text-muted-foreground/70 px-3 uppercase tracking-wider">
               {group.title}
             </h3>
-            <nav className="space-y-1">
+            <div className="space-y-1">
               {group.items.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
                   <button
-                    key={item.title}
+                    key={item.url}
                     onClick={() => {
                       navigate(item.url);
                       closeSidebar();
                     }}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-3 sm:py-2 text-sm text-right transition-all duration-200",
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-sm scale-[0.98]"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[0.98]"
+                        ? "bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-medium shadow-sm border border-primary/20"
+                        : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <item.icon className="h-4 w-4 flex-shrink-0" />
-                    <span className="font-medium">{item.title}</span>
+                    <div className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
+                      isActive 
+                        ? "bg-primary text-primary-foreground shadow-md" 
+                        : "bg-muted/50"
+                    )}>
+                      <item.icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 text-right">
+                      <div className="font-medium">{item.title}</div>
+                      {item.description && (
+                        <div className="text-xs text-muted-foreground/70 mt-0.5">
+                          {item.description}
+                        </div>
+                      )}
+                    </div>
                   </button>
                 );
               })}
-            </nav>
+            </div>
           </div>
         ))}
       </ScrollArea>
 
-      {/* Sidebar Footer */}
-      <div className="border-t p-3 sm:p-4 bg-card/90">
-        <div className="flex items-center gap-2 mb-3">
-          <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-            <AvatarFallback className="bg-muted text-xs sm:text-sm">
-              {profile?.full_name
-                ? profile.full_name.charAt(0).toUpperCase()
-                : profile?.email?.charAt(0).toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold text-sm">
-              {profile?.full_name || profile?.email || "مستخدم"}
-            </span>
-            <div className="flex items-center gap-1">
-              {getRoleBadge(profile?.user_role)}
+      {/* Enhanced Bottom Section with Booking Info */}
+      <div className="mt-auto border-t border-border/50 bg-gradient-to-t from-background/50 to-transparent">
+        {/* Booking Summary Section - New Addition */}
+        <div className="px-4 py-4 space-y-3">
+          <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-3 border border-primary/20">
+            <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              ملخص حالة الدفع اليوم
+            </h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">إجمالي الطلاب</span>
+                <span className="font-bold text-foreground">84</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">الحضور حتى الآن</span>
+                <span className="font-bold text-green-600">80</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div className="bg-gradient-to-r from-primary to-primary-dark h-full transition-all duration-500" style={{ width: '95%' }}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-card/50 rounded-lg p-2 text-center border border-border/30">
+              <div className="text-xs text-muted-foreground">القاعة الأولى</div>
+              <div className="text-sm font-bold text-foreground">140 جنيه</div>
+            </div>
+            <div className="bg-card/50 rounded-lg p-2 text-center border border-border/30">
+              <div className="text-xs text-muted-foreground">عدد الطلاب</div>
+              <div className="text-sm font-bold text-foreground">84 طالب</div>
+            </div>
+            <div className="bg-card/50 rounded-lg p-2 text-center border border-border/30">
+              <div className="text-xs text-muted-foreground">الوقت</div>
+              <div className="text-sm font-bold text-foreground">14:00</div>
             </div>
           </div>
         </div>
-        <LogoutButton />
+
+        {/* User Profile Section - Enhanced */}
+        <div className="px-4 py-3 border-t border-border/30">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border-2 border-primary/20">
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold">
+                  {profile?.full_name?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid gap-0.5">
+                <p className="text-sm font-semibold leading-none">{profile?.full_name || "مستخدم"}</p>
+                {getRoleBadge(profile?.user_role)}
+              </div>
+            </div>
+            <SignOutButton />
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -410,7 +469,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
 
       {/* Mobile Sidebar - Using Sheet component for better mobile experience */}
       <Sheet open={sidebarOpen} onOpenChange={(open) => open ? openSidebar() : closeSidebar()}>
-        <SheetContent side="right" className="w-72 p-0" style={{ direction: 'rtl' }}>
+        <SheetContent side="right" className="w-[85%] max-w-sm p-0 overflow-hidden" style={{ direction: 'rtl' }}>
           <SidebarContent />
         </SheetContent>
       </Sheet>
@@ -426,9 +485,10 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
                 variant="ghost"
                 size="icon"
                 onClick={openSidebar}
-                className="lg:hidden"
+                className="lg:hidden relative h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 group"
               >
-                <Menu className="h-5 w-5" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                <Menu className="h-5 w-5 relative z-10 transition-transform duration-200 group-hover:scale-110" />
                 <span className="sr-only">فتح القائمة</span>
               </Button>
               

@@ -354,6 +354,38 @@
     @apply transition-all duration-200 ease-in-out;
   }
 
+  /* Enhanced mobile menu animations */
+  [data-state="open"] {
+    animation-duration: 400ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  [data-state="closed"] {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.72, 0, 0.32, 1);
+  }
+
+  /* Smooth scrolling for mobile sidebar */
+  .sidebar-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent body scroll when mobile menu is open */
+  body:has([data-state="open"]) {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+
+  /* Better touch targets for mobile */
+  @media (max-width: 768px) {
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
   /* Enhanced backdrop blur */
   .backdrop-blur-sm {
     backdrop-filter: blur(8px);
