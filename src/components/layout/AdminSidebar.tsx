@@ -330,7 +330,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
           </div>
           <div className="grid flex-1 text-left leading-tight">
             <span className="truncate font-bold text-base sm:text-lg bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-              {appTitle ?? 'نادي العلوم'}
+              {appTitle ?? 'Science Club'}
             </span>
             <span className="truncate text-xs text-muted-foreground/80 hidden sm:block">
               {appSubtitle ?? 'لوحة التحكم الإدارية'}
@@ -423,7 +423,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
   return (
     <div className="flex h-screen bg-background" style={{ ['--bottom-nav-height' as any]: `${bottomNavHeightPx}px` }}>
       {/* Desktop Sidebar - Always visible on large screens */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-50 border-l bg-card" style={{ direction: 'rtl' }}>
+      <aside className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-50 border-r bg-card" style={{ direction: 'rtl' }}>
         <SidebarContent />
       </aside>
 
@@ -474,7 +474,7 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
                 </Button>
               </div>
 
-              {/* Breadcrumbs */}
+              {/* Breadcrumbs - show on desktop only */}
               <Breadcrumb className="hidden md:flex">
                 <BreadcrumbList>
                   {breadcrumbs.map((crumb, index) => (
@@ -496,8 +496,6 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
                   ))}
                 </BreadcrumbList>
               </Breadcrumb>
-
-              <h1 className="text-lg sm:text-xl font-bold text-primary md:hidden">{appTitle ?? 'نادي العلوم'}</h1>
             </div>
             <div className="flex items-center gap-2">
               <NotificationBell />
@@ -506,33 +504,29 @@ export function AdminSidebar({ children, navigation, appTitle, appSubtitle }: Ad
         </header>
 
         {/* Page Content with improved scrolling and space for mobile bottom bar */}
-        <main className="flex-1 overflow-auto p-4 md:p-6 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+16px)] md:pb-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6 pb-20 md:pb-6">{children}</main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-[56] md:hidden">
-        <div className="mx-auto max-w-screen-sm">
-          <div className="border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-[env(safe-area-inset-bottom)]">
-            <nav className="grid grid-cols-5 items-center">
-              {quickNav.map((item) => {
-                const isActive = location.pathname === item.url;
-                return (
-                  <button
-                    key={item.url}
-                    onClick={() => navigate(item.url)}
-                    className={cn(
-                      "flex flex-col items-center justify-center py-2 text-[11px] leading-tight",
-                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <item.icon className={cn("h-5 w-5", isActive && "scale-110")} />
-                    <span className="mt-1">{item.title}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
+      <div className="fixed bottom-0 left-0 right-0 z-[56] md:hidden border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <nav className="grid grid-cols-5 items-center h-16">
+          {quickNav.map((item) => {
+            const isActive = location.pathname === item.url;
+            return (
+              <button
+                key={item.url}
+                onClick={() => navigate(item.url)}
+                className={cn(
+                  "flex flex-col items-center justify-center h-full text-[11px] leading-tight",
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon className={cn("h-5 w-5", isActive && "scale-110")} />
+                <span className="mt-1">{item.title}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

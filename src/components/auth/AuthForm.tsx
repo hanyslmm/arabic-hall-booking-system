@@ -25,7 +25,7 @@ export const AuthForm = () => {
       if (error) throw error;
       toast({
         title: "تم تسجيل الدخول بنجاح",
-        description: "مرحباً بك في نادي العلوم"
+        description: "مرحباً بك في Science Club"
       });
     } catch (error: any) {
       toast({
@@ -42,7 +42,7 @@ export const AuthForm = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary-glow/10 p-4">
       <Card className="w-full max-w-md card-elevated">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">نادي العلوم</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Science Club</CardTitle>
           <div className="mb-2 text-lg font-semibold text-green-700">welcome to Science School</div>
           <CardDescription>
             تسجيل الدخول إلى نظام حجز القاعات

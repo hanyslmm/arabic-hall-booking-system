@@ -86,7 +86,7 @@ export function UnifiedLayout({ children }: UnifiedLayoutProps) {
   ];
 
   // Determine the appropriate title and subtitle based on role
-  const appTitle = "نادي العلوم";
+  const appTitle = "Science Club";
   let appSubtitle = "لوحة التحكم";
   
   if (isOwner || userRole === 'owner') {

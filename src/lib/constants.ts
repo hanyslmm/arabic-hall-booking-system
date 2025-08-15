@@ -1,6 +1,6 @@
 // Application constants
 export const APP_CONFIG = {
-  name: "نادي العلوم",
+  name: "Science Club",
   description: "نظام إدارة وحجز القاعات التعليمية",
   pagination: {
     defaultPageSize: 10,

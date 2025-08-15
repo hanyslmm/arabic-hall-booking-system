@@ -75,7 +75,6 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
               <Menu className="h-5 w-5" />
               <span className="sr-only">فتح القائمة</span>
             </Button>
-            <h1 className="text-lg font-bold text-primary">نادي العلوم</h1>
           </div>
           
           <div className="flex items-center gap-2">
